@@ -17,12 +17,11 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <h2 className="text-2xl font-bold text-white">
-              YourBrand
+              Bookora
             </h2>
 
             <p className="mt-4 max-w-sm text-sm leading-6 text-slate-400">
-              Building modern, responsive, and user-friendly web
-              applications using the latest technologies.
+              Unlock the joy of reading with Bookora. Browse diverse collections from local providers and enjoy secure, fast delivery right to your door.
             </p>
 
             <div className="mt-6 flex items-center gap-4">
@@ -103,8 +102,7 @@ export default function Footer() {
             </h3>
 
             <p className="mb-4 text-sm text-slate-400">
-              Subscribe to receive the latest updates. (Frontend
-              placeholder)
+              Subscribe to receive the latest updates.
             </p>
 
             <form className="flex flex-col gap-3 sm:flex-row">
