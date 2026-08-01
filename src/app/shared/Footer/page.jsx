@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
-  FaGithub,
-  FaLinkedin,
+  FaYoutube,
+  FaInstagram,
   FaFacebookF,
 } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
@@ -34,19 +34,19 @@ export default function Footer() {
   </Link>
 
   <Link
-    href="https://github.com"
+    href="https://youtube.com"
     target="_blank"
     className="rounded-lg border border-slate-700 p-2 transition hover:border-sky-500 hover:text-white"
   >
-    <FaGithub className="h-5 w-5" />
+    <FaYoutube  className="h-5 w-5" />
   </Link>
 
   <Link
-    href="https://linkedin.com"
+    href="https://instagram.com"
     target="_blank"
     className="rounded-lg border border-slate-700 p-2 transition hover:border-sky-500 hover:text-white"
   >
-    <FaLinkedin className="h-5 w-5" />
+    <FaInstagram  className="h-5 w-5" />
   </Link>
 
   <Link
