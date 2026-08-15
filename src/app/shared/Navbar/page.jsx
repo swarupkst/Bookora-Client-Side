@@ -144,7 +144,7 @@ export default function Navbar({ session = null, onLogout = () => {} }) {
             </button>
           ) : (
             <Link
-              href="/login"
+              href="/auth/signin"
               className="rounded-md bg-[#C08A3E] px-5 py-2 text-sm font-bold text-[#141D30] transition-colors hover:bg-[#D8A85C]"
             >
               Login
@@ -219,7 +219,7 @@ export default function Navbar({ session = null, onLogout = () => {} }) {
               </button>
             ) : (
               <Link
-                href="/login"
+                href="/auth/signin"
                 className="block rounded-md bg-[#C08A3E] px-3 py-2.5 text-center text-sm font-bold text-[#141D30]"
               >
                 Login
