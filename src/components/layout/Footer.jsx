@@ -1,20 +1,27 @@
 import Link from "next/link";
+
 import {
   BookOpen,
-  Facebook,
-  Instagram,
-  Linkedin,
   Mail,
   ArrowRight,
 } from "lucide-react";
+
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaXTwitter,
+} from "react-icons/fa6";
 
 export default function Footer() {
   return (
     <footer className="bg-neutral-950 text-white">
       <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
-          {/* Brand */}
 
+          {/* =========================================
+              Brand
+          ========================================= */}
           <div>
             <Link
               href="/"
@@ -35,47 +42,50 @@ export default function Footer() {
               owners, one story at a time.
             </p>
 
+            {/* Social Links */}
             <div className="mt-6 flex gap-2">
+
+              {/* Facebook */}
               <a
                 href="#"
                 aria-label="Facebook"
                 className="btn btn-circle btn-sm border-white/10 bg-white/5 text-white hover:bg-white/10"
               >
-                <Facebook size={16} />
+                <FaFacebookF size={15} />
               </a>
 
+              {/* Instagram */}
               <a
                 href="#"
                 aria-label="Instagram"
                 className="btn btn-circle btn-sm border-white/10 bg-white/5 text-white hover:bg-white/10"
               >
-                <Instagram size={16} />
+                <FaInstagram size={16} />
               </a>
 
+              {/* LinkedIn */}
               <a
                 href="#"
                 aria-label="LinkedIn"
                 className="btn btn-circle btn-sm border-white/10 bg-white/5 text-white hover:bg-white/10"
               >
-                <Linkedin size={16} />
+                <FaLinkedinIn size={16} />
               </a>
 
-              {/* X logo */}
-
+              {/* X / Twitter */}
               <a
                 href="#"
                 aria-label="X"
                 className="btn btn-circle btn-sm border-white/10 bg-white/5 text-white hover:bg-white/10"
               >
-                <span className="text-sm font-bold">
-                  𝕏
-                </span>
+                <FaXTwitter size={15} />
               </a>
             </div>
           </div>
 
-          {/* Quick links */}
-
+          {/* =========================================
+              Quick Links
+          ========================================= */}
           <div>
             <h3 className="font-bold">
               Quick Links
@@ -129,8 +139,9 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Community */}
-
+          {/* =========================================
+              Community
+          ========================================= */}
           <div>
             <h3 className="font-bold">
               For the community
@@ -166,8 +177,9 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Newsletter */}
-
+          {/* =========================================
+              Newsletter
+          ========================================= */}
           <div>
             <h3 className="font-bold">
               Stay in the loop
@@ -180,18 +192,22 @@ export default function Footer() {
 
             <div className="mt-5">
               <div className="join w-full">
+
                 <input
                   type="email"
                   placeholder="Your email"
+                  aria-label="Email address"
                   className="input join-item w-full border-white/10 bg-white/5 text-white placeholder:text-white/30"
                 />
 
                 <button
+                  type="button"
                   className="btn join-item btn-primary"
                   aria-label="Subscribe"
                 >
                   <ArrowRight size={17} />
                 </button>
+
               </div>
             </div>
 
@@ -202,9 +218,12 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* =========================================
+            Copyright
+        ========================================= */}
         <div className="mt-14 border-t border-white/10 pt-7 text-center text-sm text-white/40">
-          © {new Date().getFullYear()}{" "}
-          Bookora. All rights reserved.
+          © {new Date().getFullYear()} Bookora.
+          All rights reserved.
         </div>
       </div>
     </footer>
