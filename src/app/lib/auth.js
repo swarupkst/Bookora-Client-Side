@@ -1,13 +1,15 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { nextCookies } from "better-auth/next-js";
+import { jwt } from "better-auth/plugins";
 
 import clientPromise from "./mongodb";
 
 const client = await clientPromise;
 
 const db = client.db(
-  process.env.MONGODB_DATABASE || "bookora"
+  process.env.MONGODB_DATABASE ||
+    "bookora"
 );
 
 export const auth = betterAuth({
@@ -19,7 +21,8 @@ export const auth = betterAuth({
     process.env.BETTER_AUTH_URL ||
     "http://localhost:3000",
 
-  secret: process.env.BETTER_AUTH_SECRET,
+  secret:
+    process.env.BETTER_AUTH_SECRET,
 
   emailAndPassword: {
     enabled: true,
@@ -27,22 +30,26 @@ export const auth = betterAuth({
 
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientId:
+        process.env.GOOGLE_CLIENT_ID ||
+        "",
+
       clientSecret:
-        process.env.GOOGLE_CLIENT_SECRET || "",
+        process.env.GOOGLE_CLIENT_SECRET ||
+        "",
     },
   },
 
   session: {
-    expiresIn: 60 * 60 * 24 * 7,
-    updateAge: 60 * 60 * 24,
+    expiresIn:
+      60 * 60 * 24 * 7,
+
+    updateAge:
+      60 * 60 * 24,
   },
 
-  trustedOrigins: [
-    "http://localhost:3000",
-  ],
-
   plugins: [
+    jwt(),
     nextCookies(),
   ],
 });

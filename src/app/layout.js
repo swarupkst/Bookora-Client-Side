@@ -1,36 +1,26 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/app/shared/Navbar/page";
-import Footer from "@/app/shared/Footer/page";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { AuthProvider } from "@/components/providers/AuthProvider";
 
 export const metadata = {
-  title: "Bookora",
-  description: "Your Local Library",
+  title: "Bookora | Your Local Library, Delivered",
+
+  description:
+    "Bookora connects readers with local libraries and independent book owners for convenient book delivery.",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme="light"
     >
-      <body className="min-h-full flex flex-col">
-        <Navbar />
-        <main>
-        {children}
-        </main>
-        <Footer />
-
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
