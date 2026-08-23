@@ -89,21 +89,11 @@ export default function RegisterPage() {
             },
 
             body: JSON.stringify({
-              authUserId:
-                data.user.id,
-
-              name:
-                data.user.name,
-
-              email:
-                data.user.email,
-
-              image:
-                data.user.image ||
-                "",
-
-              role: form.role,
-            }),
+  name: data.user.name,
+  email: data.user.email,
+  image: data.user.image || "",
+  role: form.role,
+}),
           }
         );
       }
