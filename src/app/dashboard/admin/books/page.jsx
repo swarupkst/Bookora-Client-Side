@@ -1,165 +1,156 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
 import {
-  BookOpen,
-  Check,
-  Eye,
-  Pencil,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
-
-const initialBooks = [
-  {
-    id: 1,
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    category: "Classic",
-    librarian: "John Doe",
-    status: "published",
-  },
-  {
-    id: 2,
-    title: "Atomic Habits",
-    author: "James Clear",
-    category: "Self Development",
-    librarian: "Jane Smith",
-    status: "pending",
-  },
-  {
-    id: 3,
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    category: "Programming",
-    librarian: "Alex Johnson",
-    status: "unpublished",
-  },
-  {
-    id: 4,
-    title: "The Psychology of Money",
-    author: "Morgan Housel",
-    category: "Finance",
-    librarian: "John Doe",
-    status: "rejected",
-  },
-];
-
-const statusConfig = {
-  published: {
-    label: "Published",
-    className: "badge-success",
-  },
-  pending: {
-    label: "Pending",
-    className: "badge-warning",
-  },
-  unpublished: {
-    label: "Unpublished",
-    className: "badge-neutral",
-  },
-  rejected: {
-    label: "Rejected",
-    className: "badge-error",
-  },
-};
+  getAllBooks,
+  approveBook,
+  rejectBook,
+  publishBook,
+  unpublishBook,
+  deleteBook,
+} from "@/lib/api";
 
 export default function AdminBooksPage() {
-  const [books, setBooks] = useState(initialBooks);
+  const [books, setBooks] = useState([]);
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadBooks = async () => {
+    try {
+      setLoading(true);
+
+      const data = await getAllBooks();
+
+      setBooks(data.books || []);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBooks();
+  }, []);
+
   const filteredBooks = useMemo(() => {
     return books.filter((book) => {
-      const searchText = search.toLowerCase();
+      const text = search.toLowerCase();
 
       const matchesSearch =
-        book.title.toLowerCase().includes(searchText) ||
-        book.author.toLowerCase().includes(searchText) ||
-        book.librarian.toLowerCase().includes(searchText);
+        book.title?.toLowerCase().includes(text) ||
+        book.author?.toLowerCase().includes(text) ||
+        book.librarianEmail
+          ?.toLowerCase()
+          .includes(text);
 
       const matchesStatus =
-        status === "all" || book.status === status;
+        status === "all" ||
+        book.status === status;
 
       return matchesSearch && matchesStatus;
     });
   }, [books, search, status]);
 
-  const updateStatus = (id, newStatus) => {
-    setBooks((current) =>
-      current.map((book) =>
-        book.id === id
-          ? { ...book, status: newStatus }
-          : book
-      )
-    );
+  const handleAction = async (
+    id,
+    action
+  ) => {
+    try {
+      if (action === "approve") {
+        await approveBook(id);
+      }
+
+      if (action === "reject") {
+        await rejectBook(id);
+      }
+
+      if (action === "publish") {
+        await publishBook(id);
+      }
+
+      if (action === "unpublish") {
+        await unpublishBook(id);
+      }
+
+      if (action === "delete") {
+        const confirmed = window.confirm(
+          "Delete this book permanently?"
+        );
+
+        if (!confirmed) return;
+
+        await deleteBook(id);
+      }
+
+      await loadBooks();
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
-  const deleteBook = (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this book?"
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
     );
+  }
 
-    if (!confirmed) return;
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="alert alert-error">
+          {error}
 
-    setBooks((current) =>
-      current.filter((book) => book.id !== id)
+          <button
+            className="btn btn-sm"
+            onClick={loadBooks}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
     <main className="min-h-screen bg-base-200 p-4 md:p-8">
 
       <div className="mx-auto max-w-7xl space-y-6">
 
-        {/* Header */}
         <div>
-
-          <div className="mb-2 flex items-center gap-2 text-primary">
-
-            <BookOpen size={24} />
-
-            <span className="font-medium">
-              Bookora Admin
-            </span>
-
-          </div>
-
           <h1 className="text-3xl font-bold">
             All Books
           </h1>
 
-          <p className="mt-1 text-base-content/60">
-            Manage every book available in the Bookora system.
+          <p className="text-base-content/60">
+            Manage all Bookora books.
           </p>
-
         </div>
 
-        {/* Toolbar */}
-        <div className="card border border-base-300 bg-base-100 shadow-sm">
+        {/* Filters */}
 
-          <div className="flex flex-col gap-3 p-4 lg:flex-row">
+        <div className="card bg-base-100 shadow-sm">
 
-            <label className="input input-bordered flex w-full items-center gap-2">
+          <div className="flex flex-col gap-3 p-4 md:flex-row">
 
-              <Search size={18} className="opacity-50" />
-
-              <input
-                type="text"
-                placeholder="Search books..."
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-                className="grow"
-              />
-
-            </label>
+            <input
+              className="input input-bordered flex-1"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+            />
 
             <select
-              className="select select-bordered w-full lg:w-56"
+              className="select select-bordered"
               value={status}
               onChange={(e) =>
                 setStatus(e.target.value)
@@ -169,12 +160,12 @@ export default function AdminBooksPage() {
                 All Status
               </option>
 
-              <option value="published">
-                Published
-              </option>
-
               <option value="pending">
                 Pending
+              </option>
+
+              <option value="published">
+                Published
               </option>
 
               <option value="unpublished">
@@ -184,15 +175,15 @@ export default function AdminBooksPage() {
               <option value="rejected">
                 Rejected
               </option>
-
             </select>
 
           </div>
 
         </div>
 
-        {/* Books */}
-        <div className="card border border-base-300 bg-base-100 shadow-sm">
+        {/* Table */}
+
+        <div className="card overflow-hidden bg-base-100 shadow-sm">
 
           <div className="overflow-x-auto">
 
@@ -200,19 +191,11 @@ export default function AdminBooksPage() {
 
               <thead>
                 <tr>
-
                   <th>Book</th>
-
                   <th>Category</th>
-
                   <th>Librarian</th>
-
                   <th>Status</th>
-
-                  <th className="text-right">
-                    Actions
-                  </th>
-
+                  <th>Actions</th>
                 </tr>
               </thead>
 
@@ -220,10 +203,9 @@ export default function AdminBooksPage() {
 
                 {filteredBooks.map((book) => (
 
-                  <tr key={book.id}>
+                  <tr key={book._id}>
 
                     <td>
-
                       <div className="font-semibold">
                         {book.title}
                       </div>
@@ -231,7 +213,6 @@ export default function AdminBooksPage() {
                       <div className="text-sm text-base-content/60">
                         {book.author}
                       </div>
-
                     </td>
 
                     <td>
@@ -239,101 +220,88 @@ export default function AdminBooksPage() {
                     </td>
 
                     <td>
-                      {book.librarian}
+                      {book.librarianEmail}
                     </td>
 
                     <td>
-                      <StatusBadge status={book.status} />
+                      <StatusBadge
+                        status={book.status}
+                      />
                     </td>
 
                     <td>
 
-                      <div className="flex justify-end gap-1">
+                      <div className="flex flex-wrap gap-1">
 
-                        <Link
-                          href={`/admin/books/${book.id}`}
-                          className="btn btn-ghost btn-sm"
-                          title="View"
-                        >
-                          <Eye size={17} />
-                        </Link>
-
-                        <Link
-                          href={`/admin/books/${book.id}/edit`}
-                          className="btn btn-ghost btn-sm"
-                          title="Edit"
-                        >
-                          <Pencil size={17} />
-                        </Link>
-
-                        {book.status === "pending" && (
+                        {book.status ===
+                          "pending" && (
                           <>
                             <button
+                              className="btn btn-success btn-sm"
                               onClick={() =>
-                                updateStatus(
-                                  book.id,
-                                  "published"
+                                handleAction(
+                                  book._id,
+                                  "approve"
                                 )
                               }
-                              className="btn btn-success btn-sm"
-                              title="Approve"
                             >
-                              <Check size={17} />
+                              Approve
                             </button>
 
                             <button
+                              className="btn btn-error btn-outline btn-sm"
                               onClick={() =>
-                                updateStatus(
-                                  book.id,
-                                  "rejected"
+                                handleAction(
+                                  book._id,
+                                  "reject"
                                 )
                               }
-                              className="btn btn-error btn-outline btn-sm"
-                              title="Reject"
                             >
-                              <X size={17} />
+                              Reject
                             </button>
                           </>
                         )}
 
-                        {book.status === "published" && (
+                        {book.status ===
+                          "published" && (
                           <button
+                            className="btn btn-warning btn-outline btn-sm"
                             onClick={() =>
-                              updateStatus(
-                                book.id,
-                                "unpublished"
+                              handleAction(
+                                book._id,
+                                "unpublish"
                               )
                             }
-                            className="btn btn-warning btn-outline btn-sm"
-                            title="Unpublish"
                           >
                             Unpublish
                           </button>
                         )}
 
-                        {book.status === "unpublished" && (
+                        {book.status ===
+                          "unpublished" && (
                           <button
+                            className="btn btn-success btn-outline btn-sm"
                             onClick={() =>
-                              updateStatus(
-                                book.id,
-                                "published"
+                              handleAction(
+                                book._id,
+                                "publish"
                               )
                             }
-                            className="btn btn-success btn-outline btn-sm"
-                            title="Publish"
                           >
                             Publish
                           </button>
                         )}
 
                         <button
+                          className="btn btn-error btn-outline btn-sm"
                           onClick={() =>
-                            deleteBook(book.id)
+                            handleAction(
+                              book._id,
+                              "delete"
+                            )
                           }
-                          className="btn btn-ghost btn-sm text-error"
-                          title="Delete"
                         >
-                          <Trash2 size={17} />
+                          Delete
                         </button>
 
                       </div>
@@ -348,25 +316,6 @@ export default function AdminBooksPage() {
 
             </table>
 
-            {filteredBooks.length === 0 && (
-              <div className="p-16 text-center">
-
-                <BookOpen
-                  size={35}
-                  className="mx-auto opacity-30"
-                />
-
-                <h3 className="mt-4 text-lg font-semibold">
-                  No books found
-                </h3>
-
-                <p className="text-sm text-base-content/60">
-                  Try changing your search or status filter.
-                </p>
-
-              </div>
-            )}
-
           </div>
 
         </div>
@@ -378,11 +327,25 @@ export default function AdminBooksPage() {
 }
 
 function StatusBadge({ status }) {
-  const config = statusConfig[status];
+  const config = {
+    pending: ["Pending", "badge-warning"],
+    published: ["Published", "badge-success"],
+    unpublished: [
+      "Unpublished",
+      "badge-neutral",
+    ],
+    rejected: ["Rejected", "badge-error"],
+  };
+
+  const [label, style] =
+    config[status] || [
+      status,
+      "badge-neutral",
+    ];
 
   return (
-    <span className={`badge ${config.className}`}>
-      {config.label}
+    <span className={`badge ${style}`}>
+      {label}
     </span>
   );
 }

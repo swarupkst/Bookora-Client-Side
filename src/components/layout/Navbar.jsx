@@ -34,6 +34,26 @@ export default function Navbar() {
     return pathname.startsWith(href);
   };
 
+  // ------------------------------------------------------------
+  // Role-based Dashboard URL
+  // ------------------------------------------------------------
+
+  const getDashboardUrl = () => {
+    if (!user) {
+      return "/login";
+    }
+
+    if (user.role === "admin") {
+      return "/dashboard/admin";
+    }
+
+    if (user.role === "librarian") {
+      return "/dashboard/librarian";
+    }
+
+    return "/dashboard/user";
+  };
+
   async function handleLogout() {
     await authClient.signOut();
 
@@ -56,7 +76,10 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-base-300/70 bg-base-100/95 backdrop-blur">
       <div className="navbar mx-auto min-h-18 max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
+
+        {/* =====================================================
+            Logo
+        ====================================================== */}
 
         <div className="navbar-start">
           <Link
@@ -79,10 +102,13 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Desktop Navigation */}
+        {/* =====================================================
+            Desktop Navigation
+        ====================================================== */}
 
         <div className="navbar-center hidden lg:flex">
           <nav className="flex items-center gap-1">
+
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -97,67 +123,35 @@ export default function Navbar() {
               </Link>
             ))}
 
+            {/* =================================================
+                Role-Based Dashboard
+                No Dropdown
+            ================================================= */}
+
             {user && (
-              <div className="dropdown dropdown-hover">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className={`flex cursor-pointer items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    pathname.startsWith(
-                      "/dashboard"
-                    )
-                      ? "bg-primary/10 text-primary"
-                      : "text-base-content/70 hover:bg-base-200"
-                  }`}
-                >
-                  Dashboard
-                  <ChevronDown size={15} />
-                </div>
-
-                <ul
-                  tabIndex={0}
-                  className="menu dropdown-content z-[60] mt-2 w-52 rounded-2xl border border-base-300 bg-base-100 p-2 shadow-xl"
-                >
-                  <li>
-                    <Link href="/dashboard">
-                      Overview
-                    </Link>
-                  </li>
-
-                  {user.role ===
-                    "user" && (
-                    <li>
-                      <Link href="/dashboard/user">
-                        My Dashboard
-                      </Link>
-                    </li>
-                  )}
-
-                  {user.role ===
-                    "librarian" && (
-                    <li>
-                      <Link href="/dashboard/librarian">
-                        Librarian Dashboard
-                      </Link>
-                    </li>
-                  )}
-
-                  {user.role === "admin" && (
-                    <li>
-                      <Link href="/dashboard/admin">
-                        Admin Dashboard
-                      </Link>
-                    </li>
-                  )}
-                </ul>
-              </div>
+              <Link
+                href={getDashboardUrl()}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  pathname.startsWith("/dashboard")
+                    ? "bg-primary/10 text-primary"
+                    : "text-base-content/70 hover:bg-base-200 hover:text-base-content"
+                }`}
+              >
+                Dashboard
+              </Link>
             )}
+
           </nav>
         </div>
 
-        {/* Desktop Auth */}
+        {/* =====================================================
+            Desktop Auth
+        ====================================================== */}
 
         <div className="navbar-end hidden gap-2 lg:flex">
+
+          {/* Not Logged In */}
+
           {!isPending && !user && (
             <>
               <Link
@@ -176,8 +170,11 @@ export default function Navbar() {
             </>
           )}
 
+          {/* Logged In */}
+
           {!isPending && user && (
             <div className="dropdown dropdown-end">
+
               <div
                 tabIndex={0}
                 role="button"
@@ -200,12 +197,15 @@ export default function Navbar() {
                 <ChevronDown size={15} />
               </div>
 
+              {/* Profile Dropdown Only */}
+
               <ul
                 tabIndex={0}
                 className="menu dropdown-content z-[60] mt-2 w-56 rounded-2xl border border-base-300 bg-base-100 p-2 shadow-xl"
               >
+
                 <li>
-                  <Link href="/dashboard">
+                  <Link href={getDashboardUrl()}>
                     Dashboard
                   </Link>
                 </li>
@@ -218,12 +218,15 @@ export default function Navbar() {
                     Logout
                   </button>
                 </li>
+
               </ul>
             </div>
           )}
         </div>
 
-        {/* Mobile button */}
+        {/* =====================================================
+            Mobile Menu Button
+        ====================================================== */}
 
         <div className="navbar-end lg:hidden">
           <button
@@ -240,13 +243,20 @@ export default function Navbar() {
             )}
           </button>
         </div>
+
       </div>
 
-      {/* Mobile menu */}
+      {/* =======================================================
+          Mobile Menu
+      ======================================================== */}
 
       {mobileOpen && (
         <div className="border-t border-base-300 bg-base-100 lg:hidden">
+
           <nav className="mx-auto max-w-7xl space-y-1 px-4 py-4">
+
+            {/* Main Links */}
+
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -264,43 +274,27 @@ export default function Navbar() {
               </Link>
             ))}
 
+            {/* =================================================
+                Single Role-Based Dashboard Link
+            ================================================= */}
+
             {user && (
               <>
                 <Link
-                  href="/dashboard"
+                  href={getDashboardUrl()}
                   onClick={() =>
                     setMobileOpen(false)
                   }
-                  className="block rounded-xl px-4 py-3 font-semibold hover:bg-base-200"
+                  className={`block rounded-xl px-4 py-3 font-semibold ${
+                    pathname.startsWith("/dashboard")
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-base-200"
+                  }`}
                 >
                   Dashboard
                 </Link>
 
-                {user.role ===
-                  "user" && (
-                  <Link
-                    href="/dashboard/user"
-                    onClick={() =>
-                      setMobileOpen(false)
-                    }
-                    className="block rounded-xl px-4 py-3 text-sm text-base-content/70 hover:bg-base-200"
-                  >
-                    My Dashboard
-                  </Link>
-                )}
-
-                {user.role ===
-                  "librarian" && (
-                  <Link
-                    href="/dashboard/librarian"
-                    onClick={() =>
-                      setMobileOpen(false)
-                    }
-                    className="block rounded-xl px-4 py-3 text-sm text-base-content/70 hover:bg-base-200"
-                  >
-                    Librarian Dashboard
-                  </Link>
-                )}
+                {/* Logout */}
 
                 <button
                   onClick={handleLogout}
@@ -311,8 +305,13 @@ export default function Navbar() {
               </>
             )}
 
+            {/* =================================================
+                Login / Register
+            ================================================= */}
+
             {!user && !isPending && (
               <div className="grid grid-cols-2 gap-2 pt-3">
+
                 <Link
                   href="/login"
                   onClick={() =>
@@ -332,8 +331,10 @@ export default function Navbar() {
                 >
                   Register
                 </Link>
+
               </div>
             )}
+
           </nav>
         </div>
       )}
