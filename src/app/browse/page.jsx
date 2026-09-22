@@ -1,5 +1,4 @@
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+
 import BookGrid from "@/components/books/BookGrid";
 
 export const metadata = {

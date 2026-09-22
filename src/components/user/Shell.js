@@ -1,0 +1,13 @@
+"use client";
+import Link from "next/link";
+import{usePathname}from"next/navigation";
+import{useState}from"react";
+import{LayoutDashboard,BookOpen,Truck,Heart,Star,UserCircle,LogOut,Menu,X,Library}from"lucide-react";
+const nav=[["/dashboard/user","Dashboard",LayoutDashboard],["/dashboard/user/deliveries","My Deliveries",Truck],["/dashboard/user/reading-list","Reading List",Heart],["/dashboard/user/reviews","My Reviews",Star],["/dashboard/user/profile","Profile",UserCircle]];
+export default function Shell({children}){const pathname=usePathname(),[open,setOpen]=useState(false);return <div className="min-h-screen bg-zinc-50">
+{open&&<button onClick={()=>setOpen(false)} className="fixed inset-0 z-40 bg-black/30 lg:hidden" aria-label="Close"/>}
+<aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r bg-white transition-transform lg:translate-x-0 ${open?"translate-x-0":"-translate-x-full"}`}>
+<div className="flex h-20 items-center justify-between border-b px-6"><Link href="/dashboard/user" className="flex items-center gap-2 text-xl font-black text-violet-700"><Library/>BookOra</Link><button onClick={()=>setOpen(false)} className="lg:hidden"><X/></button></div>
+<nav className="space-y-1 p-4">{nav.map(([href,label,Icon])=><Link key={href} href={href} onClick={()=>setOpen(false)} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${pathname===href?"bg-violet-600 text-white":"text-zinc-600 hover:bg-violet-50 hover:text-violet-700"}`}><Icon size={19}/>{label}</Link>)}</nav>
+<div className="absolute bottom-0 w-full border-t p-4"><Link href="/browse-books" className="mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-zinc-600 hover:bg-zinc-100"><BookOpen size={19}/>Browse Books</Link><button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-500 hover:bg-red-50"><LogOut size={19}/>Logout</button></div>
+</aside><div className="lg:pl-72"><header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b bg-white/90 px-4 backdrop-blur md:px-8"><button className="rounded-xl p-2 hover:bg-zinc-100 lg:hidden" onClick={()=>setOpen(true)}><Menu/></button><div className="hidden lg:block"><h1 className="font-bold">Reader Dashboard</h1><p className="text-xs text-zinc-500">Manage your books, deliveries and reviews</p></div><div className="ml-auto flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-bold">Swarup</p><p className="text-xs text-zinc-500">Reader</p></div><img src="https://i.pravatar.cc/80?img=12" className="h-10 w-10 rounded-full object-cover" alt="Profile"/></div></header><main className="p-4 md:p-8">{children}</main></div></div>}

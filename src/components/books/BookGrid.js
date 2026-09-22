@@ -1,489 +1,589 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-
 import {
-  Search,
-  SlidersHorizontal,
-  ChevronLeft,
-  ChevronRight,
+    Search,
+    SlidersHorizontal,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 
 import BookCard from "@/components/ui/BookCard";
-import { apiFetch } from "@/lib/api";
+import { getBook } from "@/lib/api/books";
 
 export default function BookGrid() {
-  const [books, setBooks] =
-    useState([]);
+    const [books, setBooks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+    const [search, setSearch] = useState("");
+    const [category, setCategory] = useState("");
+    const [status, setStatus] = useState("");
+    const [minFee, setMinFee] = useState("");
+    const [maxFee, setMaxFee] = useState("");
+    const [sort, setSort] = useState("newest");
 
-  const [error, setError] =
-    useState("");
+    const [page, setPage] = useState(1);
 
-  const [search, setSearch] =
-    useState("");
+    const limit = 12;
 
-  const [category, setCategory] =
-    useState("");
+    async function fetchBooks() {
+        try {
+            setLoading(true);
+            setError("");
 
-  const [status, setStatus] =
-    useState("");
+            // Get all books from API
+            const result = await getBook(null, "");
 
-  const [minFee, setMinFee] =
-    useState("");
+            const allBooks = result.data || [];
 
-  const [maxFee, setMaxFee] =
-    useState("");
+            // Search
+            let filteredBooks = allBooks.filter((book) => {
+                const searchText = search.trim().toLowerCase();
 
-  const [sort, setSort] =
-    useState("newest");
+                if (!searchText) {
+                    return true;
+                }
 
-  const [page, setPage] =
-    useState(1);
+                return (
+                    book.title
+                        ?.toLowerCase()
+                        .includes(searchText) ||
+                    book.author
+                        ?.toLowerCase()
+                        .includes(searchText)
+                );
+            });
 
-  const [pagination, setPagination] =
-    useState({
-      page: 1,
-      total: 0,
-      totalPages: 1,
-    });
+            // Category filter
+            if (category) {
+                filteredBooks = filteredBooks.filter(
+                    (book) =>
+                        book.category === category
+                );
+            }
 
-  const limit = 12;
+            // Availability filter
+            if (status) {
+                filteredBooks = filteredBooks.filter(
+                    (book) => {
+                        const isAvailable =
+                            Number(book.quantity) >= 1;
 
-  async function fetchBooks() {
-    try {
-      setLoading(true);
-      setError("");
+                        if (status === "available") {
+                            return isAvailable;
+                        }
 
-      const params =
-        new URLSearchParams();
+                        if (status === "checked_out") {
+                            return !isAvailable;
+                        }
 
-      if (search.trim()) {
-        params.set(
-          "search",
-          search.trim()
-        );
-      }
+                        return true;
+                    }
+                );
+            }
 
-      if (category) {
-        params.set(
-          "category",
-          category
-        );
-      }
+            // Minimum delivery fee
+            if (minFee !== "") {
+                filteredBooks = filteredBooks.filter(
+                    (book) =>
+                        Number(book.deliveryFee) >=
+                        Number(minFee)
+                );
+            }
 
-      if (status) {
-        params.set(
-          "status",
-          status
-        );
-      }
+            // Maximum delivery fee
+            if (maxFee !== "") {
+                filteredBooks = filteredBooks.filter(
+                    (book) =>
+                        Number(book.deliveryFee) <=
+                        Number(maxFee)
+                );
+            }
 
-      if (minFee) {
-        params.set(
-          "minFee",
-          minFee
-        );
-      }
+            // Sorting
+            filteredBooks.sort((a, b) => {
+                switch (sort) {
+                    case "oldest":
+                        return (
+                            new Date(a.createdAt) -
+                            new Date(b.createdAt)
+                        );
 
-      if (maxFee) {
-        params.set(
-          "maxFee",
-          maxFee
-        );
-      }
+                    case "fee_low":
+                        return (
+                            Number(a.deliveryFee || 0) -
+                            Number(b.deliveryFee || 0)
+                        );
 
-      params.set("sort", sort);
-      params.set(
-        "page",
-        page.toString()
-      );
-      params.set(
-        "limit",
-        limit.toString()
-      );
+                    case "fee_high":
+                        return (
+                            Number(b.deliveryFee || 0) -
+                            Number(a.deliveryFee || 0)
+                        );
 
-      const result =
-        await apiFetch(
-          `/books?${params.toString()}`
-        );
+                    case "title_az":
+                        return (a.title || "").localeCompare(
+                            b.title || ""
+                        );
 
-      setBooks(result.data);
-      setPagination(
-        result.pagination
-      );
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+                    case "newest":
+                    default:
+                        return (
+                            new Date(b.createdAt) -
+                            new Date(a.createdAt)
+                        );
+                }
+            });
+
+            setBooks(filteredBooks);
+            setPage(1);
+        } catch (err) {
+            console.error("Books:", err);
+
+            setError(
+                err.message ||
+                    "Failed to load books."
+            );
+        } finally {
+            setLoading(false);
+        }
     }
-  }
 
-  useEffect(() => {
-    fetchBooks();
-  }, [
-    page,
-    category,
-    status,
-    sort,
-    minFee,
-    maxFee,
-  ]);
+    useEffect(() => {
+        fetchBooks();
+    }, [
+        category,
+        status,
+        sort,
+        minFee,
+        maxFee,
+    ]);
 
-  function handleSearch(e) {
-    e.preventDefault();
+    function handleSearch(e) {
+        e.preventDefault();
 
-    setPage(1);
+        fetchBooks();
+    }
 
-    fetchBooks();
-  }
+    function resetFilters() {
+        setSearch("");
+        setCategory("");
+        setStatus("");
+        setMinFee("");
+        setMaxFee("");
+        setSort("newest");
+        setPage(1);
+    }
 
-  function resetFilters() {
-    setSearch("");
-    setCategory("");
-    setStatus("");
-    setMinFee("");
-    setMaxFee("");
-    setSort("newest");
-    setPage(1);
-  }
+    // Pagination
+    const total = books.length;
 
-  return (
-    <>
-      {/* Filters */}
+    const totalPages = Math.max(
+        1,
+        Math.ceil(total / limit)
+    );
 
-      <div className="mb-10 rounded-3xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
-        <form
-          onSubmit={handleSearch}
-          className="grid gap-3 lg:grid-cols-12"
-        >
-          <label className="input input-bordered flex items-center gap-2 rounded-xl lg:col-span-5">
-            <Search
-              size={18}
-              className="text-base-content/40"
-            />
+    const startIndex =
+        (page - 1) * limit;
 
-            <input
-              value={search}
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
-              type="search"
-              placeholder="Search title or author..."
-              className="grow"
-            />
-          </label>
+    const paginatedBooks = books.slice(
+        startIndex,
+        startIndex + limit
+    );
 
-          <select
-            value={category}
-            onChange={(e) => {
-              setCategory(
-                e.target.value
-              );
-              setPage(1);
-            }}
-            className="select select-bordered rounded-xl lg:col-span-2"
-          >
-            <option value="">
-              All Categories
-            </option>
-            <option>
-              Fiction
-            </option>
-            <option>
-              Sci-Fi
-            </option>
-            <option>
-              Academic
-            </option>
-            <option>
-              Programming
-            </option>
-            <option>
-              Self Development
-            </option>
-            <option>
-              Biography
-            </option>
-          </select>
+    const hasPreviousPage = page > 1;
+    const hasNextPage = page < totalPages;
 
-          <select
-            value={status}
-            onChange={(e) => {
-              setStatus(
-                e.target.value
-              );
-              setPage(1);
-            }}
-            className="select select-bordered rounded-xl lg:col-span-2"
-          >
-            <option value="">
-              All Availability
-            </option>
-            <option value="available">
-              Available
-            </option>
-            <option value="checked_out">
-              Checked Out
-            </option>
-          </select>
+    return (
+        <>
+            {/* Filters */}
 
-          <select
-            value={sort}
-            onChange={(e) => {
-              setSort(
-                e.target.value
-              );
-              setPage(1);
-            }}
-            className="select select-bordered rounded-xl lg:col-span-2"
-          >
-            <option value="newest">
-              Newest
-            </option>
+            <div className="mb-10 rounded-3xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
+                <form
+                    onSubmit={handleSearch}
+                    className="grid gap-3 lg:grid-cols-12"
+                >
+                    {/* Search */}
 
-            <option value="oldest">
-              Oldest
-            </option>
+                    <label className="input input-bordered flex items-center gap-2 rounded-xl lg:col-span-5">
+                        <Search
+                            size={18}
+                            className="text-base-content/40"
+                        />
 
-            <option value="fee_low">
-              Fee: Low to High
-            </option>
+                        <input
+                            value={search}
+                            onChange={(e) =>
+                                setSearch(
+                                    e.target.value
+                                )
+                            }
+                            type="search"
+                            placeholder="Search title or author..."
+                            className="grow"
+                        />
+                    </label>
 
-            <option value="fee_high">
-              Fee: High to Low
-            </option>
+                    {/* Category */}
 
-            <option value="title_az">
-              Title: A-Z
-            </option>
-          </select>
+                    <select
+                        value={category}
+                        onChange={(e) => {
+                            setCategory(
+                                e.target.value
+                            );
+                            setPage(1);
+                        }}
+                        className="select select-bordered rounded-xl lg:col-span-2"
+                    >
+                        <option value="">
+                            All Categories
+                        </option>
 
-          <button
-            type="submit"
-            className="btn btn-primary rounded-xl lg:col-span-1"
-          >
-            Search
-          </button>
-        </form>
+                        <option value="Fiction">
+                            Fiction
+                        </option>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-base-content/60">
-            Delivery fee:
-          </span>
+                        <option value="Sci-Fi">
+                            Sci-Fi
+                        </option>
 
-          <input
-            value={minFee}
-            onChange={(e) => {
-              setMinFee(
-                e.target.value
-              );
-              setPage(1);
-            }}
-            type="number"
-            min="0"
-            placeholder="Min"
-            className="input input-sm input-bordered w-24 rounded-lg"
-          />
+                        <option value="Academic">
+                            Academic
+                        </option>
 
-          <span className="text-base-content/40">
-            -
-          </span>
+                        <option value="Programming">
+                            Programming
+                        </option>
 
-          <input
-            value={maxFee}
-            onChange={(e) => {
-              setMaxFee(
-                e.target.value
-              );
-              setPage(1);
-            }}
-            type="number"
-            min="0"
-            placeholder="Max"
-            className="input input-sm input-bordered w-24 rounded-lg"
-          />
+                        <option value="Self Development">
+                            Self Development
+                        </option>
 
-          <button
-            onClick={resetFilters}
-            type="button"
-            className="btn btn-ghost btn-sm ml-auto rounded-lg"
-          >
-            <SlidersHorizontal
-              size={15}
-            />
-            Reset
-          </button>
-        </div>
-      </div>
+                        <option value="Biography">
+                            Biography
+                        </option>
+                    </select>
 
-      {/* Result */}
+                    {/* Availability */}
 
-      {loading && (
-        <div className="flex min-h-72 items-center justify-center">
-          <div className="text-center">
-            <span className="loading loading-spinner loading-lg text-primary" />
+                    <select
+                        value={status}
+                        onChange={(e) => {
+                            setStatus(
+                                e.target.value
+                            );
+                            setPage(1);
+                        }}
+                        className="select select-bordered rounded-xl lg:col-span-2"
+                    >
+                        <option value="">
+                            All Availability
+                        </option>
 
-            <p className="mt-3 text-sm text-base-content/50">
-              Loading books...
-            </p>
-          </div>
-        </div>
-      )}
+                        <option value="available">
+                            Available
+                        </option>
 
-      {!loading && error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-        </div>
-      )}
+                        <option value="checked_out">
+                            Checked Out
+                        </option>
+                    </select>
 
-      {!loading &&
-        !error &&
-        books.length === 0 && (
-          <div className="rounded-3xl border border-dashed border-base-300 bg-base-100 px-5 py-20 text-center">
-            <h3 className="text-2xl font-black">
-              No books found
-            </h3>
+                    {/* Sort */}
 
-            <p className="mt-2 text-base-content/50">
-              Try changing your search or
-              filters.
-            </p>
+                    <select
+                        value={sort}
+                        onChange={(e) => {
+                            setSort(
+                                e.target.value
+                            );
+                            setPage(1);
+                        }}
+                        className="select select-bordered rounded-xl lg:col-span-2"
+                    >
+                        <option value="newest">
+                            Newest
+                        </option>
 
-            <button
-              onClick={resetFilters}
-              className="btn btn-primary mt-6 rounded-xl"
-            >
-              Clear Filters
-            </button>
-          </div>
-        )}
+                        <option value="oldest">
+                            Oldest
+                        </option>
 
-      {!loading &&
-        !error &&
-        books.length > 0 && (
-          <>
-            <div className="mb-5 flex items-center justify-between">
-              <p className="text-sm font-semibold text-base-content/55">
-                Showing{" "}
-                <span className="text-base-content">
-                  {books.length}
-                </span>{" "}
-                of{" "}
-                <span className="text-base-content">
-                  {pagination.total}
-                </span>{" "}
-                books
-              </p>
+                        <option value="fee_low">
+                            Fee: Low to High
+                        </option>
+
+                        <option value="fee_high">
+                            Fee: High to Low
+                        </option>
+
+                        <option value="title_az">
+                            Title: A-Z
+                        </option>
+                    </select>
+
+                    {/* Search Button */}
+
+                    <button
+                        type="submit"
+                        className="btn btn-primary rounded-xl lg:col-span-1"
+                    >
+                        Search
+                    </button>
+                </form>
+
+                {/* Delivery Fee */}
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-base-content/60">
+                        Delivery fee:
+                    </span>
+
+                    <input
+                        value={minFee}
+                        onChange={(e) => {
+                            setMinFee(
+                                e.target.value
+                            );
+                            setPage(1);
+                        }}
+                        type="number"
+                        min="0"
+                        placeholder="Min"
+                        className="input input-sm input-bordered w-24 rounded-lg"
+                    />
+
+                    <span className="text-base-content/40">
+                        -
+                    </span>
+
+                    <input
+                        value={maxFee}
+                        onChange={(e) => {
+                            setMaxFee(
+                                e.target.value
+                            );
+                            setPage(1);
+                        }}
+                        type="number"
+                        min="0"
+                        placeholder="Max"
+                        className="input input-sm input-bordered w-24 rounded-lg"
+                    />
+
+                    <button
+                        onClick={resetFilters}
+                        type="button"
+                        className="btn btn-ghost btn-sm ml-auto rounded-lg"
+                    >
+                        <SlidersHorizontal
+                            size={15}
+                        />
+                        Reset
+                    </button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {books.map((book) => (
-                <BookCard
-                  key={book._id}
-                  book={{
-                    ...book,
-                    id: book._id,
-                    image:
-                      book.coverImage,
-                    deliveryFee:
-                      book.deliveryFee,
-                    status:
-                      book.status ===
-                      "available"
-                        ? "Available"
-                        : "Checked Out",
-                  }}
-                />
-              ))}
-            </div>
+            {/* Loading */}
 
-            {/* Pagination */}
+            {loading && (
+                <div className="flex min-h-72 items-center justify-center">
+                    <div className="text-center">
+                        <span className="loading loading-spinner loading-lg text-primary" />
 
-            <div className="mt-10 flex items-center justify-center gap-2">
-              <button
-                disabled={
-                  !pagination.hasPreviousPage
-                }
-                onClick={() =>
-                  setPage(
-                    (current) =>
-                      current - 1
-                  )
-                }
-                className="btn btn-square btn-outline rounded-xl disabled:opacity-40"
-              >
-                <ChevronLeft
-                  size={18}
-                />
-              </button>
+                        <p className="mt-3 text-sm text-base-content/50">
+                            Loading books...
+                        </p>
+                    </div>
+                </div>
+            )}
 
-              <div className="flex items-center gap-1">
-                {Array.from(
-                  {
-                    length:
-                      pagination.totalPages,
-                  },
-                  (_, index) =>
-                    index + 1
-                )
-                  .slice(
-                    Math.max(
-                      page - 3,
-                      0
-                    ),
-                    page + 2
-                  )
-                  .map(
-                    (pageNumber) => (
-                      <button
-                        key={
-                          pageNumber
-                        }
-                        onClick={() =>
-                          setPage(
-                            pageNumber
-                          )
-                        }
-                        className={`btn btn-square rounded-xl ${
-                          pageNumber ===
-                          page
-                            ? "btn-primary"
-                            : "btn-ghost"
-                        }`}
-                      >
-                        {
-                          pageNumber
-                        }
-                      </button>
-                    )
-                  )}
-              </div>
+            {/* Error */}
 
-              <button
-                disabled={
-                  !pagination.hasNextPage
-                }
-                onClick={() =>
-                  setPage(
-                    (current) =>
-                      current + 1
-                  )
-                }
-                className="btn btn-square btn-outline rounded-xl disabled:opacity-40"
-              >
-                <ChevronRight
-                  size={18}
-                />
-              </button>
-            </div>
-          </>
-        )}
-    </>
-  );
+            {!loading && error && (
+                <div className="alert alert-error">
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {/* No Books */}
+
+            {!loading &&
+                !error &&
+                paginatedBooks.length === 0 && (
+                    <div className="rounded-3xl border border-dashed border-base-300 bg-base-100 px-5 py-20 text-center">
+                        <h3 className="text-2xl font-black">
+                            No books found
+                        </h3>
+
+                        <p className="mt-2 text-base-content/50">
+                            Try changing your search
+                            or filters.
+                        </p>
+
+                        <button
+                            onClick={resetFilters}
+                            className="btn btn-primary mt-6 rounded-xl"
+                        >
+                            Clear Filters
+                        </button>
+                    </div>
+                )}
+
+            {/* Books */}
+
+            {!loading &&
+                !error &&
+                paginatedBooks.length > 0 && (
+                    <>
+                        <div className="mb-5 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-base-content/55">
+                                Showing{" "}
+                                <span className="text-base-content">
+                                    {startIndex + 1}
+                                </span>{" "}
+                                -{" "}
+                                <span className="text-base-content">
+                                    {Math.min(
+                                        startIndex +
+                                            limit,
+                                        total
+                                    )}
+                                </span>{" "}
+                                of{" "}
+                                <span className="text-base-content">
+                                    {total}
+                                </span>{" "}
+                                books
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                            {paginatedBooks.map(
+                                (book) => (
+                                    <BookCard
+                                        key={
+                                            book._id
+                                        }
+                                        book={{
+                                            ...book,
+                                            id: book._id,
+
+                                            // Prevent empty src=""
+                                            image:
+                                                book.coverImage ||
+                                                null,
+
+                                            deliveryFee:
+                                                book.deliveryFee,
+
+                                            status:
+                                                Number(
+                                                    book.quantity
+                                                ) >= 1
+                                                    ? "Available"
+                                                    : "Checked Out",
+                                        }}
+                                    />
+                                )
+                            )}
+                        </div>
+
+                        {/* Pagination */}
+
+                        {totalPages > 1 && (
+                            <div className="mt-10 flex items-center justify-center gap-2">
+                                {/* Previous */}
+
+                                <button
+                                    disabled={
+                                        !hasPreviousPage
+                                    }
+                                    onClick={() =>
+                                        setPage(
+                                            (current) =>
+                                                current -
+                                                1
+                                        )
+                                    }
+                                    className="btn btn-square btn-outline rounded-xl disabled:opacity-40"
+                                >
+                                    <ChevronLeft
+                                        size={18}
+                                    />
+                                </button>
+
+                                {/* Page Numbers */}
+
+                                <div className="flex items-center gap-1">
+                                    {Array.from(
+                                        {
+                                            length: totalPages,
+                                        },
+                                        (_, index) =>
+                                            index + 1
+                                    )
+                                        .slice(
+                                            Math.max(
+                                                page -
+                                                    3,
+                                                0
+                                            ),
+                                            page + 2
+                                        )
+                                        .map(
+                                            (
+                                                pageNumber
+                                            ) => (
+                                                <button
+                                                    key={
+                                                        pageNumber
+                                                    }
+                                                    onClick={() =>
+                                                        setPage(
+                                                            pageNumber
+                                                        )
+                                                    }
+                                                    className={`btn btn-square rounded-xl ${
+                                                        pageNumber ===
+                                                        page
+                                                            ? "btn-primary"
+                                                            : "btn-ghost"
+                                                    }`}
+                                                >
+                                                    {
+                                                        pageNumber
+                                                    }
+                                                </button>
+                                            )
+                                        )}
+                                </div>
+
+                                {/* Next */}
+
+                                <button
+                                    disabled={
+                                        !hasNextPage
+                                    }
+                                    onClick={() =>
+                                        setPage(
+                                            (current) =>
+                                                current +
+                                                1
+                                        )
+                                    }
+                                    className="btn btn-square btn-outline rounded-xl disabled:opacity-40"
+                                >
+                                    <ChevronRight
+                                        size={18}
+                                    />
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+        </>
+    );
 }

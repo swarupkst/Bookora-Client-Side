@@ -1,7 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
-import BookDetails from "@/components/books/BookDetails";
+import BookDetails from "@/app/books/BookDetails";
 
 export default async function BookDetailsPage({
   params,
@@ -10,13 +10,13 @@ export default async function BookDetailsPage({
 
   return (
     <div className="min-h-screen bg-base-200/40">
-      <Navbar />
+      
 
       <main>
         <BookDetails id={id} />
       </main>
 
-      <Footer />
+
     </div>
   );
 }

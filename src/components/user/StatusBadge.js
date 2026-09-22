@@ -1,0 +1,1 @@
+export default function StatusBadge({status}){const s={Delivered:"bg-emerald-50 text-emerald-700",Dispatched:"bg-blue-50 text-blue-700",Pending:"bg-amber-50 text-amber-700"};return <span className={`rounded-full px-3 py-1 text-xs font-bold ${s[status]||"bg-zinc-100 text-zinc-600"}`}>{status}</span>}
