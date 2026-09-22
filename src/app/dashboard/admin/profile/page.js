@@ -2,161 +2,467 @@
 
 import { useEffect, useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
-import { Camera, Save, ShieldCheck } from "lucide-react";
-
-const defaultProfile = {
-  name: "BookOra Admin",
-  email: "admin@gmail.com",
-  phone: "+880 1XXXXXXXXX",
-  role: "Administrator",
-  bio: "Responsible for platform moderation, book approvals and user management.",
-  image: ""
-};
+import {
+    Camera,
+    Save,
+    ShieldCheck,
+    Loader2,
+} from "lucide-react";
+import { authClient } from "@/app/lib/auth-client";
 
 export default function AdminProfilePage() {
-  const [profile, setProfile] = useState(defaultProfile);
-  const [saved, setSaved] = useState(false);
+    const {
+        data: session,
+        isPending,
+    } = authClient.useSession();
 
-  useEffect(() => {
-    const stored = localStorage.getItem("bookora-admin-profile");
-    if (stored) setProfile(JSON.parse(stored));
-  }, []);
+    const user = session?.user;
 
-  function handleChange(event) {
-    const { name, value } = event.target;
-    setProfile((prev) => ({ ...prev, [name]: value }));
-    setSaved(false);
-  }
+    const [name, setName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [avatar, setAvatar] = useState(
+        "https://i.pravatar.cc/160?img=12"
+    );
 
-  function handleImage(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const [imageFile, setImageFile] = useState(null);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setProfile((prev) => ({ ...prev, image: reader.result }));
-      setSaved(false);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [error, setError] = useState("");
+
+    // Load logged-in admin information
+    useEffect(() => {
+        if (!user) return;
+
+        setName(user.name || "");
+        setPhone(user.phone || "");
+
+        setAvatar(
+            user.image ||
+                "https://i.pravatar.cc/160?img=12"
+        );
+    }, [user]);
+
+    // Handle input changes
+    const handleChange = (event) => {
+        const { name, value } = event.target;
+
+        setSaved(false);
+        setError("");
+
+        if (name === "name") {
+            setName(value);
+        }
+
+        if (name === "phone") {
+            setPhone(value);
+        }
     };
-    reader.readAsDataURL(file);
-  }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    localStorage.setItem("bookora-admin-profile", JSON.stringify(profile));
-    setSaved(true);
-  }
+    // Handle profile image
+    const handleImage = (event) => {
+        const file = event.target.files?.[0];
 
-  return (
-    <AdminShell
-      title="Admin Profile"
-      subtitle="Update your profile information. This demo stores changes in localStorage."
-    >
-      <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-3">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col items-center text-center">
-            <div className="relative">
-              {profile.image ? (
-                <img
-                  src={profile.image}
-                  alt="Admin profile"
-                  className="h-28 w-28 rounded-2xl object-cover"
-                />
-              ) : (
-                <div className="grid h-28 w-28 place-items-center rounded-2xl bg-violet-100 text-3xl font-extrabold text-violet-700">
-                  AD
-                </div>
-              )}
+        if (!file) return;
 
-              <label className="absolute -bottom-2 -right-2 grid h-10 w-10 cursor-pointer place-items-center rounded-xl bg-violet-600 text-white shadow-lg">
-                <Camera size={18} />
-                <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
-              </label>
-            </div>
+        setSaved(false);
+        setError("");
 
-            <h2 className="mt-5 text-xl font-bold text-zinc-900">{profile.name}</h2>
-            <p className="text-sm text-zinc-500">{profile.email}</p>
+        if (!file.type.startsWith("image/")) {
+            setError(
+                "Please select a valid image file."
+            );
+            return;
+        }
 
-            <div className="mt-4 flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700">
-              <ShieldCheck size={15} />
-              {profile.role}
-            </div>
-          </div>
-        </section>
+        if (file.size > 5 * 1024 * 1024) {
+            setError(
+                "Image size cannot exceed 5MB."
+            );
+            return;
+        }
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm xl:col-span-2">
-          <h2 className="text-lg font-bold text-zinc-900">Profile Information</h2>
-          <p className="mt-1 text-sm text-zinc-500">Edit your basic administrator information.</p>
+        setImageFile(file);
 
-          <div className="mt-6 grid gap-5 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-zinc-700">Full Name</span>
-              <input
-                name="name"
-                value={profile.name}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-zinc-200 px-4 py-3 outline-none focus:border-violet-500"
-              />
-            </label>
+        const previewUrl =
+            URL.createObjectURL(file);
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-zinc-700">Email</span>
-              <input
-                name="email"
-                type="email"
-                value={profile.email}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-zinc-200 px-4 py-3 outline-none focus:border-violet-500"
-              />
-            </label>
+        setAvatar(previewUrl);
+    };
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-zinc-700">Phone</span>
-              <input
-                name="phone"
-                value={profile.phone}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-zinc-200 px-4 py-3 outline-none focus:border-violet-500"
-              />
-            </label>
+    // Upload image to existing ImgBB API
+    const uploadImageToImgBB = async (file) => {
+        const uploadData = new FormData();
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-zinc-700">Role</span>
-              <input
-                value={profile.role}
-                disabled
-                className="w-full cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-500"
-              />
-            </label>
+        uploadData.append("image", file);
 
-            <label className="block md:col-span-2">
-              <span className="mb-2 block text-sm font-semibold text-zinc-700">Bio</span>
-              <textarea
-                name="bio"
-                value={profile.bio}
-                onChange={handleChange}
-                rows="4"
-                className="w-full resize-none rounded-xl border border-zinc-200 px-4 py-3 outline-none focus:border-violet-500"
-              />
-            </label>
-          </div>
+        const response = await fetch(
+            "/api/upload-image",
+            {
+                method: "POST",
+                body: uploadData,
+            }
+        );
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-700"
+        const contentType =
+            response.headers.get(
+                "content-type"
+            );
+
+        if (
+            !contentType?.includes(
+                "application/json"
+            )
+        ) {
+            const text =
+                await response.text();
+
+            console.error(
+                "Upload API returned non-JSON:",
+                text
+            );
+
+            throw new Error(
+                "Image upload server returned an invalid response."
+            );
+        }
+
+        const result =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
+            throw new Error(
+                result.message ||
+                    "Failed to upload image."
+            );
+        }
+
+        return result.url;
+    };
+
+    // Save profile
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        setSaving(true);
+        setSaved(false);
+        setError("");
+
+        try {
+            if (!user) {
+                throw new Error(
+                    "Please login to update your profile."
+                );
+            }
+
+            const trimmedName =
+                name.trim();
+
+            const trimmedPhone =
+                phone.trim();
+
+            if (!trimmedName) {
+                throw new Error(
+                    "Full name cannot be empty."
+                );
+            }
+
+            let imageUrl =
+                user.image || "";
+
+            // Upload new image if selected
+            if (imageFile) {
+                imageUrl =
+                    await uploadImageToImgBB(
+                        imageFile
+                    );
+            }
+
+            // Update Better Auth user
+            const {
+                error: updateError,
+            } =
+                await authClient.updateUser({
+                    name: trimmedName,
+                    phone: trimmedPhone,
+                    image: imageUrl,
+                });
+
+            if (updateError) {
+                throw new Error(
+                    updateError.message ||
+                        "Failed to update profile."
+                );
+            }
+
+            setImageFile(null);
+
+            // Show success message
+            setSaved(true);
+
+            setTimeout(() => {
+                setSaved(false);
+            }, 2500);
+        } catch (err) {
+            console.error(
+                "ADMIN PROFILE UPDATE ERROR:",
+                err
+            );
+
+            setError(
+                err?.message ||
+                    "Failed to update profile. Please try again."
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Loading
+    if (isPending) {
+        return (
+            <AdminShell
+                title="Admin Profile"
+                subtitle="Loading your profile information..."
             >
-              <Save size={17} />
-              Save Changes
-            </button>
+                <div className="flex min-h-[400px] items-center justify-center">
+                    <Loader2
+                        size={30}
+                        className="animate-spin text-violet-600"
+                    />
+                </div>
+            </AdminShell>
+        );
+    }
 
-            {saved && (
-              <span className="text-sm font-semibold text-emerald-600">
-                Profile saved successfully.
-              </span>
-            )}
-          </div>
-        </section>
-      </form>
-    </AdminShell>
-  );
+    // Not logged in
+    if (!user) {
+        return (
+            <AdminShell
+                title="Admin Profile"
+                subtitle="Manage your administrator profile."
+            >
+                <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
+                    <p className="font-bold text-red-600">
+                        Please login to view your profile.
+                    </p>
+                </div>
+            </AdminShell>
+        );
+    }
+
+    const role =
+        user.role === "admin"
+            ? "Administrator"
+            : user.role || "Administrator";
+
+    return (
+        <AdminShell
+            title="Admin Profile"
+            subtitle="Update your administrator profile information."
+        >
+            <form
+                onSubmit={handleSubmit}
+                className="grid gap-6 xl:grid-cols-3"
+            >
+                {/* Profile Card */}
+                <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+                    <div className="flex flex-col items-center text-center">
+                        <div className="relative">
+                            {avatar ? (
+                                <img
+                                    src={avatar}
+                                    alt={
+                                        user.name ||
+                                        "Admin profile"
+                                    }
+                                    className="h-28 w-28 rounded-2xl object-cover"
+                                />
+                            ) : (
+                                <div className="grid h-28 w-28 place-items-center rounded-2xl bg-violet-100 text-3xl font-extrabold text-violet-700">
+                                    {(
+                                        user.name ||
+                                        "AD"
+                                    )
+                                        .slice(0, 2)
+                                        .toUpperCase()}
+                                </div>
+                            )}
+
+                            <label className="absolute -bottom-2 -right-2 grid h-10 w-10 cursor-pointer place-items-center rounded-xl bg-violet-600 text-white shadow-lg transition hover:bg-violet-700">
+                                <Camera size={18} />
+
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={
+                                        handleImage
+                                    }
+                                />
+                            </label>
+                        </div>
+
+                        <h2 className="mt-5 text-xl font-bold text-zinc-900">
+                            {name ||
+                                user.name ||
+                                "Admin"}
+                        </h2>
+
+                        <p className="text-sm text-zinc-500">
+                            {user.email}
+                        </p>
+
+                        <div className="mt-4 flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700">
+                            <ShieldCheck
+                                size={15}
+                            />
+                            {role}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Profile Information */}
+                <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm xl:col-span-2">
+                    <h2 className="text-lg font-bold text-zinc-900">
+                        Profile Information
+                    </h2>
+
+                    <p className="mt-1 text-sm text-zinc-500">
+                        Edit your basic administrator information.
+                    </p>
+
+                    {/* Error */}
+                    {error && (
+                        <div className="mt-5 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Success */}
+                    {saved && (
+                        <div className="mt-5 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
+                            Profile saved successfully.
+                        </div>
+                    )}
+
+                    <div className="mt-6 grid gap-5 md:grid-cols-2">
+                        {/* Full Name */}
+                        <label className="block">
+                            <span className="mb-2 block text-sm font-semibold text-zinc-700">
+                                Full Name
+                            </span>
+
+                            <input
+                                name="name"
+                                value={name}
+                                onChange={
+                                    handleChange
+                                }
+                                disabled={
+                                    saving
+                                }
+                                className="w-full rounded-xl border border-zinc-200 px-4 py-3 outline-none transition focus:border-violet-500 disabled:cursor-not-allowed disabled:bg-zinc-50"
+                            />
+                        </label>
+
+                        {/* Email */}
+                        <label className="block">
+                            <span className="mb-2 block text-sm font-semibold text-zinc-700">
+                                Email
+                            </span>
+
+                            <input
+                                type="email"
+                                value={
+                                    user.email ||
+                                    ""
+                                }
+                                readOnly
+                                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-500 outline-none"
+                            />
+                        </label>
+
+                        {/* Phone */}
+                        <label className="block">
+                            <span className="mb-2 block text-sm font-semibold text-zinc-700">
+                                Phone
+                            </span>
+
+                            <input
+                                name="phone"
+                                value={phone}
+                                onChange={
+                                    handleChange
+                                }
+                                disabled={
+                                    saving
+                                }
+                                placeholder="+880 1XXXXXXXXX"
+                                className="w-full rounded-xl border border-zinc-200 px-4 py-3 outline-none transition focus:border-violet-500 disabled:cursor-not-allowed disabled:bg-zinc-50"
+                            />
+                        </label>
+
+                        {/* Role */}
+                        <label className="block">
+                            <span className="mb-2 block text-sm font-semibold text-zinc-700">
+                                Role
+                            </span>
+
+                            <input
+                                value={role}
+                                disabled
+                                className="w-full cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-500"
+                            />
+                        </label>
+
+                        {/* User ID */}
+                        <label className="block md:col-span-2">
+                            <span className="mb-2 block text-sm font-semibold text-zinc-700">
+                                User ID
+                            </span>
+
+                            <input
+                                value={
+                                    user.id ||
+                                    ""
+                                }
+                                disabled
+                                className="w-full cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-500"
+                            />
+                        </label>
+                    </div>
+
+                    {/* Save */}
+                    <div className="mt-6 flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2
+                                        size={17}
+                                        className="animate-spin"
+                                    />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save
+                                        size={17}
+                                    />
+                                    Save Changes
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </section>
+            </form>
+        </AdminShell>
+    );
 }
