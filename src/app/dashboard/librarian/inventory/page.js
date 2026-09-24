@@ -12,6 +12,7 @@ export default function Inventory() {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [actionLoading, setActionLoading] = useState(null);
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -60,14 +61,17 @@ export default function Inventory() {
         fetchBooks();
     }, [session, sessionLoading, baseUrl]);
 
+    // Delete book
     const handleDelete = async (bookId) => {
         const confirmed = window.confirm(
-            "Are you sure you want to delete this book?"
+            "Are you sure you want to permanently delete this book?"
         );
 
         if (!confirmed) return;
 
         try {
+            setActionLoading(bookId);
+
             const res = await fetch(
                 `${baseUrl}/api/books/${bookId}`,
                 {
@@ -99,6 +103,63 @@ export default function Inventory() {
             alert(
                 error.message || "Failed to delete book"
             );
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    // Unpublish book
+    const handleUnpublish = async (bookId) => {
+        const confirmed = window.confirm(
+            "Are you sure you want to unpublish this book?"
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setActionLoading(bookId);
+
+            const res = await fetch(
+                `${baseUrl}/api/books/${bookId}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        librarianId: session.user.id,
+                        status: "unpublished",
+                    }),
+                }
+            );
+
+            const result = await res.json();
+
+            if (!res.ok || !result.success) {
+                throw new Error(
+                    result.message || "Failed to unpublish book"
+                );
+            }
+
+            setRows((prev) =>
+                prev.map((book) =>
+                    book._id === bookId
+                        ? {
+                              ...book,
+                              status: "unpublished",
+                          }
+                        : book
+                )
+            );
+
+        } catch (error) {
+            console.error("Unpublish book error:", error);
+
+            alert(
+                error.message || "Failed to unpublish book"
+            );
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -117,7 +178,7 @@ export default function Inventory() {
 
                 <Link
                     href="/dashboard/librarian/add-book"
-                    className="rounded-xl bg-[#5b4bdb] px-4 py-3 text-center text-sm font-bold text-white"
+                    className="rounded-xl bg-[#5b4bdb] px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-[#4d3ec4]"
                 >
                     + Add Book
                 </Link>
@@ -137,7 +198,7 @@ export default function Inventory() {
 
             {!loading && !error && (
                 <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
-                    <table className="w-full min-w-[800px] text-left text-sm">
+                    <table className="w-full min-w-[1000px] text-left text-sm">
                         <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                             <tr>
                                 <th className="p-4">Book</th>
@@ -178,20 +239,73 @@ export default function Inventory() {
                                         </td>
 
                                         <td>
-                                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold">
+                                            <span
+                                                className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                                                    book.status === "approved"
+                                                        ? "bg-green-100 text-green-700"
+                                                        : book.status === "pending"
+                                                        ? "bg-yellow-100 text-yellow-700"
+                                                        : book.status === "unpublished"
+                                                        ? "bg-slate-200 text-slate-600"
+                                                        : "bg-slate-100 text-slate-600"
+                                                }`}
+                                            >
                                                 {book.status}
                                             </span>
                                         </td>
 
-                                        <td>
-                                            <button
-                                                onClick={() =>
-                                                    handleDelete(book._id)
-                                                }
-                                                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-600"
-                                            >
-                                                Delete
-                                            </button>
+                                        <td className="py-4">
+                                            <div className="flex flex-wrap gap-2">
+
+                                                {/* Edit */}
+                                                <Link
+                                                    href={`/dashboard/librarian/edit-book/${book._id}`}
+                                                    className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-600 transition hover:bg-blue-50"
+                                                >
+                                                    Edit
+                                                </Link>
+
+                                                {/* Unpublish */}
+                                                {book.status !== "unpublished" && (
+                                                    <button
+                                                        onClick={() =>
+                                                            handleUnpublish(
+                                                                book._id
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            actionLoading ===
+                                                            book._id
+                                                        }
+                                                        className="rounded-lg border border-orange-200 px-3 py-2 text-xs font-bold text-orange-600 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        {actionLoading ===
+                                                        book._id
+                                                            ? "Processing..."
+                                                            : "Unpublish"}
+                                                    </button>
+                                                )}
+
+                                                {/* Delete */}
+                                                <button
+                                                    onClick={() =>
+                                                        handleDelete(
+                                                            book._id
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        actionLoading ===
+                                                        book._id
+                                                    }
+                                                    className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {actionLoading ===
+                                                    book._id
+                                                        ? "Processing..."
+                                                        : "Delete"}
+                                                </button>
+
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
