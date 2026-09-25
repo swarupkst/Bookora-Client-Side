@@ -7,28 +7,31 @@ export async function GET() {
 
     const db = client.db("bookora");
 
-    const librarians = await db
+    const users = await db
       .collection("user")
       .find(
-        { role: "librarian" },
+        {},
         {
           projection: {
             name: 1,
             email: 1,
             image: 1,
             role: 1,
+            emailVerified: 1,
+            createdAt: 1,
+            updatedAt: 1,
           },
         }
       )
       .toArray();
 
-    return NextResponse.json(librarians);
+    return NextResponse.json(users);
   } catch (error) {
-    console.error("Librarian API Error:", error);
+    console.error("Users API Error:", error);
 
     return NextResponse.json(
       {
-        message: "Failed to fetch librarians",
+        message: "Failed to fetch users",
       },
       {
         status: 500,
