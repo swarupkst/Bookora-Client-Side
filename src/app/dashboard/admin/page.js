@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
               <BookOpenCheck size={21} />
             </div>
             <div>
-              <h3 className="font-bold text-zinc-900">3 books are waiting for approval</h3>
+              <h3 className="font-bold text-zinc-900">See books are waiting for approval</h3>
               <p className="mt-1 text-sm text-zinc-600">
                 Review pending librarian submissions before publishing them.
               </p>
@@ -49,7 +49,7 @@ export default function AdminDashboardPage() {
       <div className="mt-6">
         <RecentTransactions />
       </div>
-      
+
     </AdminShell>
   );
 }

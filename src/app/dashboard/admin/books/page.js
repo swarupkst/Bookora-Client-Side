@@ -513,7 +513,7 @@ export default function BooksPage() {
                                     </th>
 
                                     <th className="px-5 py-3">
-                                        Librarian
+                                        Added By
                                     </th>
 
                                     <th className="px-5 py-3">

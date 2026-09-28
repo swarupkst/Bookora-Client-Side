@@ -1,9 +1,11 @@
-'use client';
+"use client";
 
 import Shell from "@/components/librarian/Shell";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { Toaster, toast } from "sonner";
+import { X, AlertTriangle } from "lucide-react";
 
 export default function Inventory() {
     const { data: session, isPending: sessionLoading } =
@@ -13,6 +15,12 @@ export default function Inventory() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [actionLoading, setActionLoading] = useState(null);
+
+    const [confirmDialog, setConfirmDialog] = useState({
+        open: false,
+        type: null,
+        book: null,
+    });
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -46,11 +54,14 @@ export default function Inventory() {
                 }
 
                 setRows(result.data || []);
-
             } catch (error) {
                 console.error("Fetch books error:", error);
 
                 setError(
+                    error.message || "Failed to load books"
+                );
+
+                toast.error(
                     error.message || "Failed to load books"
                 );
             } finally {
@@ -61,14 +72,28 @@ export default function Inventory() {
         fetchBooks();
     }, [session, sessionLoading, baseUrl]);
 
+    // Open confirmation dialog
+    const openConfirmation = (type, book) => {
+        setConfirmDialog({
+            open: true,
+            type,
+            book,
+        });
+    };
+
+    // Close confirmation dialog
+    const closeConfirmation = () => {
+        if (actionLoading) return;
+
+        setConfirmDialog({
+            open: false,
+            type: null,
+            book: null,
+        });
+    };
+
     // Delete book
     const handleDelete = async (bookId) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to permanently delete this book?"
-        );
-
-        if (!confirmed) return;
-
         try {
             setActionLoading(bookId);
 
@@ -97,10 +122,11 @@ export default function Inventory() {
                 prev.filter((book) => book._id !== bookId)
             );
 
+            toast.success("Book deleted successfully.");
         } catch (error) {
             console.error("Delete book error:", error);
 
-            alert(
+            toast.error(
                 error.message || "Failed to delete book"
             );
         } finally {
@@ -110,12 +136,6 @@ export default function Inventory() {
 
     // Unpublish book
     const handleUnpublish = async (bookId) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to unpublish this book?"
-        );
-
-        if (!confirmed) return;
-
         try {
             setActionLoading(bookId);
 
@@ -152,10 +172,11 @@ export default function Inventory() {
                 )
             );
 
+            toast.success("Book unpublished successfully.");
         } catch (error) {
             console.error("Unpublish book error:", error);
 
-            alert(
+            toast.error(
                 error.message || "Failed to unpublish book"
             );
         } finally {
@@ -163,8 +184,36 @@ export default function Inventory() {
         }
     };
 
+    // Confirm selected action
+    const handleConfirmedAction = async () => {
+        const { type, book } = confirmDialog;
+
+        if (!book || !type) return;
+
+        setConfirmDialog({
+            open: false,
+            type: null,
+            book: null,
+        });
+
+        if (type === "delete") {
+            await handleDelete(book._id);
+        }
+
+        if (type === "unpublish") {
+            await handleUnpublish(book._id);
+        }
+    };
+
     return (
         <Shell>
+            <Toaster
+                position="top-right"
+                richColors
+                closeButton
+                duration={3500}
+            />
+
             <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-black">
@@ -269,8 +318,9 @@ export default function Inventory() {
                                                 {book.status !== "unpublished" && (
                                                     <button
                                                         onClick={() =>
-                                                            handleUnpublish(
-                                                                book._id
+                                                            openConfirmation(
+                                                                "unpublish",
+                                                                book
                                                             )
                                                         }
                                                         disabled={
@@ -289,8 +339,9 @@ export default function Inventory() {
                                                 {/* Delete */}
                                                 <button
                                                     onClick={() =>
-                                                        handleDelete(
-                                                            book._id
+                                                        openConfirmation(
+                                                            "delete",
+                                                            book
                                                         )
                                                     }
                                                     disabled={
@@ -304,7 +355,6 @@ export default function Inventory() {
                                                         ? "Processing..."
                                                         : "Delete"}
                                                 </button>
-
                                             </div>
                                         </td>
                                     </tr>
@@ -312,6 +362,79 @@ export default function Inventory() {
                             )}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {/* Confirmation Modal */}
+            {confirmDialog.open && confirmDialog.book && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                    <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+
+                        {/* Close */}
+                        <button
+                            onClick={closeConfirmation}
+                            className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        {/* Icon */}
+                        <div
+                            className={`mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
+                                confirmDialog.type === "delete"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-orange-100 text-orange-600"
+                            }`}
+                        >
+                            <AlertTriangle size={24} />
+                        </div>
+
+                        <h2 className="text-xl font-black text-slate-900">
+                            {confirmDialog.type === "delete"
+                                ? "Delete Book?"
+                                : "Unpublish Book?"}
+                        </h2>
+
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            {confirmDialog.type === "delete"
+                                ? "Are you sure you want to permanently delete this book? This action cannot be undone."
+                                : "Are you sure you want to unpublish this book? It will no longer be available as a published book."}
+                        </p>
+
+                        {/* Book info */}
+                        <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                            <p className="font-bold text-slate-900">
+                                {confirmDialog.book.title}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                                {confirmDialog.book.author}
+                            </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                onClick={closeConfirmation}
+                                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={handleConfirmedAction}
+                                className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white transition ${
+                                    confirmDialog.type === "delete"
+                                        ? "bg-red-600 hover:bg-red-700"
+                                        : "bg-orange-600 hover:bg-orange-700"
+                                }`}
+                            >
+                                {confirmDialog.type === "delete"
+                                    ? "Delete Book"
+                                    : "Unpublish"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </Shell>
