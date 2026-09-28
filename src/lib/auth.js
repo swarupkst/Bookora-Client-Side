@@ -4,12 +4,21 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
-const db = client.db();
+const db = client.db("bookora");
 
 export const auth = betterAuth({
     database: mongodbAdapter(db, {
         client,
     }),
+
+    baseURL: process.env.BETTER_AUTH_URL,
+
+    socialProviders: {
+        google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        },
+    },
 
     emailAndPassword: {
         enabled: true,
@@ -18,7 +27,7 @@ export const auth = betterAuth({
     user: {
         additionalFields: {
             role: {
-                type: ["user", "librarian"],
+                type: "string",
                 required: true,
                 defaultValue: "user",
                 input: true,

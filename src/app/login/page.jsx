@@ -60,13 +60,25 @@ export default function LoginPage() {
   }
 
   async function handleGoogleLogin() {
-    setError("");
+  setError("");
+  setLoading(true);
 
+  try {
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: "http://localhost:3000/",
+      callbackURL: "/",
+      errorCallbackURL: "/login",
     });
+  } catch (err) {
+    console.error("Google login error:", err);
+
+    setError(
+      err?.message || "Google sign-in failed. Please try again."
+    );
+
+    setLoading(false);
   }
+}
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-base-200 px-4 py-5 sm:px-6">
