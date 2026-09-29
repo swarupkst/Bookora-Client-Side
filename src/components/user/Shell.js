@@ -20,7 +20,7 @@ const nav = [
     ["/dashboard/user", "Dashboard", LayoutDashboard],
     ["/browse", "Browse Books", BookOpen],
     ["/dashboard/user/deliveries", "My Deliveries", Truck],
-    ["/dashboard/user/reading-list", "Reading List", Heart],
+    ["/dashboard/user/reading-list", "Wishlist", Heart],
     ["/dashboard/user/reviews", "My Reviews", Star],
     ["/dashboard/user/profile", "Profile", UserCircle],
 ];

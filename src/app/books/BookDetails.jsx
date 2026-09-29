@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -55,7 +54,8 @@ export default function BookDetails({ id }) {
                 setLoading(true);
                 setError("");
 
-                const result = await getBookById(id);
+                const result =
+                    await getBookById(id);
 
                 setBook(result.data);
             } catch (err) {
@@ -92,14 +92,15 @@ export default function BookDetails({ id }) {
             }
 
             try {
-                const response = await fetch(
-                    `${API_URL}/api/wishlist?userId=${encodeURIComponent(
-                        session.user.id
-                    )}`,
-                    {
-                        credentials: "include",
-                    }
-                );
+                const response =
+                    await fetch(
+                        `${API_URL}/api/wishlist?userId=${encodeURIComponent(
+                            session.user.id
+                        )}`,
+                        {
+                            credentials: "include",
+                        }
+                    );
 
                 const data =
                     await response.json();
@@ -114,7 +115,9 @@ export default function BookDetails({ id }) {
                 const exists =
                     data.data?.some(
                         (item) =>
-                            String(item.bookId) ===
+                            String(
+                                item.bookId
+                            ) ===
                             String(id)
                     );
 
@@ -125,8 +128,6 @@ export default function BookDetails({ id }) {
                     err
                 );
 
-                // Do not show wishlist-check errors
-                // as the main page error.
                 setIsWishlisted(false);
             }
         }
@@ -134,7 +135,11 @@ export default function BookDetails({ id }) {
         if (!sessionLoading) {
             checkWishlist();
         }
-    }, [session, sessionLoading, id]);
+    }, [
+        session,
+        sessionLoading,
+        id,
+    ]);
 
     /*
      * =======================================================
@@ -143,7 +148,6 @@ export default function BookDetails({ id }) {
      */
 
     const handleWishlist = async () => {
-        // User must be logged in
         if (!session?.user) {
             router.push(
                 `/login?redirect=/books/${id}`
@@ -155,27 +159,31 @@ export default function BookDetails({ id }) {
             setWishlistLoading(true);
             setError("");
 
-            const response = await fetch(
-                `${API_URL}/api/wishlist`,
-                {
-                    method: isWishlisted
-                        ? "DELETE"
-                        : "POST",
+            const response =
+                await fetch(
+                    `${API_URL}/api/wishlist`,
+                    {
+                        method: isWishlisted
+                            ? "DELETE"
+                            : "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                    },
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
 
-                    credentials: "include",
+                        credentials:
+                            "include",
 
-                    body: JSON.stringify({
-                        userId:
-                            session.user.id,
-                        bookId: id,
-                    }),
-                }
-            );
+                        body: JSON.stringify({
+                            userId:
+                                session.user
+                                    .id,
+
+                            bookId: id,
+                        }),
+                    }
+                );
 
             const data =
                 await response.json();
@@ -207,7 +215,7 @@ export default function BookDetails({ id }) {
 
     /*
      * =======================================================
-     * REQUEST DELIVERY
+     * BOOK AVAILABILITY
      * =======================================================
      */
 
@@ -222,7 +230,8 @@ export default function BookDetails({ id }) {
         quantity < 1;
 
     const isPendingDelivery =
-        book?.status === "Pending Delivery" ||
+        book?.status ===
+            "Pending Delivery" ||
         book?.status ===
             "pending_delivery";
 
@@ -258,101 +267,84 @@ export default function BookDetails({ id }) {
 
     /*
      * =======================================================
-     * REQUEST DELIVERY HANDLER
+     * STRIPE CHECKOUT
      * =======================================================
      */
 
-    const handleRequestDelivery =
-        async () => {
-            // User must be logged in
-            if (!session?.user) {
-                router.push(
-                    `/login?redirect=/books/${id}`
-                );
-                return;
+const handleRequestDelivery = async () => {
+    // User must be logged in
+    if (!session?.user) {
+        router.push(
+            `/login?redirect=/books/${id}`
+        );
+        return;
+    }
+
+    // Owner cannot request own book
+    if (isBookOwner) {
+        return;
+    }
+
+    // Cannot request unavailable book
+    if (
+        isCheckedOut ||
+        isPendingDelivery
+    ) {
+        return;
+    }
+
+    try {
+        setCheckoutLoading(true);
+        setError("");
+
+        const response = await fetch(
+            `${API_URL}/payments/create-checkout-session`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+
+                credentials: "include",
+
+                body: JSON.stringify({
+                    bookId: id,
+                }),
             }
+        );
 
-            // Owner cannot request own book
-            if (isBookOwner) {
-                return;
-            }
+        const data = await response.json();
 
-            // Cannot request unavailable book
-            if (
-                isCheckedOut ||
-                isPendingDelivery
-            ) {
-                return;
-            }
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                    "Unable to start checkout."
+            );
+        }
 
-            try {
-                setCheckoutLoading(true);
-                setError("");
+        if (!data.url) {
+            throw new Error(
+                "Stripe checkout URL was not returned."
+            );
+        }
 
-                /*
-                 * Do not calculate the final
-                 * payment amount on the client.
-                 *
-                 * Backend should read the book
-                 * from MongoDB and create the
-                 * Stripe Checkout Session.
-                 */
+        window.location.href = data.url;
+    } catch (err) {
+        console.error(
+            "Stripe checkout:",
+            err
+        );
 
-                const response =
-                    await fetch(
-                        `${API_URL}/payments/create-checkout-session`,
-                        {
-                            method: "POST",
+        setError(
+            err.message ||
+                "Unable to start payment."
+        );
 
-                            headers: {
-                                "Content-Type":
-                                    "application/json",
-                            },
-
-                            credentials:
-                                "include",
-
-                            body: JSON.stringify(
-                                {
-                                    bookId: id,
-                                }
-                            ),
-                        }
-                    );
-
-                const data =
-                    await response.json();
-
-                if (!response.ok) {
-                    throw new Error(
-                        data.message ||
-                            "Unable to start checkout."
-                    );
-                }
-
-                if (!data.url) {
-                    throw new Error(
-                        "Stripe checkout URL was not returned."
-                    );
-                }
-
-                // Redirect to Stripe Checkout
-                window.location.href =
-                    data.url;
-            } catch (err) {
-                console.error(
-                    "Stripe checkout:",
-                    err
-                );
-
-                setError(
-                    err.message ||
-                        "Unable to start payment."
-                );
-
-                setCheckoutLoading(false);
-            }
-        };
+        setCheckoutLoading(false);
+    }
+};
 
     /*
      * =======================================================
@@ -444,9 +436,8 @@ export default function BookDetails({ id }) {
 
     return (
         <section className="mx-auto max-w-7xl px-5 py-12 lg:px-8 lg:py-20">
-            {/* =================================================
-                BACK
-            ================================================== */}
+
+            {/* BACK */}
 
             <Link
                 href="/browse"
@@ -457,11 +448,13 @@ export default function BookDetails({ id }) {
             </Link>
 
             <div className="grid gap-10 lg:grid-cols-[400px_1fr] lg:gap-16">
+
                 {/* =================================================
                     COVER
                 ================================================== */}
 
                 <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-base-200 shadow-xl">
+
                     {book.coverImage ? (
                         <Image
                             src={
@@ -483,6 +476,7 @@ export default function BookDetails({ id }) {
                             />
                         </div>
                     )}
+
                 </div>
 
                 {/* =================================================
@@ -490,9 +484,11 @@ export default function BookDetails({ id }) {
                 ================================================== */}
 
                 <div>
+
                     {/* Category + Status */}
 
                     <div className="flex flex-wrap gap-2">
+
                         {book.category && (
                             <span className="badge badge-primary badge-outline px-3 py-3">
                                 {
@@ -508,6 +504,7 @@ export default function BookDetails({ id }) {
                                 statusText
                             }
                         </span>
+
                     </div>
 
                     {/* Title */}
@@ -531,6 +528,7 @@ export default function BookDetails({ id }) {
                     {/* Description */}
 
                     <div>
+
                         <h2 className="mb-3 text-xl font-bold">
                             About this book
                         </h2>
@@ -539,16 +537,17 @@ export default function BookDetails({ id }) {
                             {book.description ||
                                 "No description available for this book."}
                         </p>
+
                     </div>
 
-                    {/* =================================================
-                        INFORMATION CARDS
-                    ================================================== */}
+                    {/* INFORMATION CARDS */}
 
                     <div className="mt-8 grid gap-3 sm:grid-cols-2">
+
                         {/* Delivery Fee */}
 
                         <div className="rounded-2xl bg-base-100 p-5 shadow-sm">
+
                             <Truck
                                 size={20}
                                 className="text-primary"
@@ -559,7 +558,7 @@ export default function BookDetails({ id }) {
                             </p>
 
                             <p className="mt-1 text-2xl font-black">
-                                ৳
+                                $
                                 {Number(
                                     book.deliveryFee ||
                                         0
@@ -567,11 +566,13 @@ export default function BookDetails({ id }) {
                                     2
                                 )}
                             </p>
+
                         </div>
 
                         {/* Date Added */}
 
                         <div className="rounded-2xl bg-base-100 p-5 shadow-sm">
+
                             <CalendarDays
                                 size={20}
                                 className="text-primary"
@@ -595,14 +596,15 @@ export default function BookDetails({ id }) {
                                       )
                                     : "N/A"}
                             </p>
+
                         </div>
+
                     </div>
 
-                    {/* =================================================
-                        ACTION BUTTONS
-                    ================================================== */}
+                    {/* ACTION BUTTONS */}
 
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+
                         {/* Wishlist */}
 
                         <button
@@ -618,6 +620,7 @@ export default function BookDetails({ id }) {
                                     : "btn-outline"
                             }`}
                         >
+
                             {wishlistLoading ? (
                                 <span className="loading loading-spinner loading-sm" />
                             ) : (
@@ -638,11 +641,10 @@ export default function BookDetails({ id }) {
                                 : isWishlisted
                                 ? "Remove from Wishlist"
                                 : "Add to Wishlist"}
+
                         </button>
 
-                        {/* =================================================
-                            DELIVERY
-                        ================================================== */}
+                        {/* DELIVERY */}
 
                         {!session?.user ? (
                             <button
@@ -660,7 +662,9 @@ export default function BookDetails({ id }) {
                                 Login to Request
                                 Delivery
                             </button>
+
                         ) : isBookOwner ? (
+
                             <button
                                 disabled
                                 className="btn btn-disabled btn-lg rounded-xl"
@@ -674,7 +678,9 @@ export default function BookDetails({ id }) {
                                 You Own This
                                 Book
                             </button>
+
                         ) : isCheckedOut ? (
+
                             <button
                                 disabled
                                 className="btn btn-disabled btn-lg rounded-xl"
@@ -688,7 +694,9 @@ export default function BookDetails({ id }) {
                                 Currently
                                 Checked Out
                             </button>
+
                         ) : isPendingDelivery ? (
+
                             <button
                                 disabled
                                 className="btn btn-disabled btn-lg rounded-xl"
@@ -701,7 +709,9 @@ export default function BookDetails({ id }) {
 
                                 Pending Delivery
                             </button>
+
                         ) : (
+
                             <button
                                 onClick={
                                     handleRequestDelivery
@@ -711,9 +721,11 @@ export default function BookDetails({ id }) {
                                 }
                                 className="btn btn-primary btn-lg rounded-xl"
                             >
+
                                 {checkoutLoading ? (
                                     <>
                                         <span className="loading loading-spinner loading-sm" />
+
                                         Redirecting...
                                     </>
                                 ) : (
@@ -728,8 +740,10 @@ export default function BookDetails({ id }) {
                                         Delivery
                                     </>
                                 )}
+
                             </button>
                         )}
+
                     </div>
 
                     {/* Error */}
@@ -750,15 +764,21 @@ export default function BookDetails({ id }) {
                                 redirected to
                                 Stripe Checkout
                                 to pay the delivery
-                                fee.
+                                fee of ৳
+                                {Number(
+                                    book.deliveryFee ||
+                                        0
+                                ).toFixed(
+                                    2
+                                )}
+                                .
                             </p>
                         )}
 
-                    {/* =================================================
-                        LIBRARIAN
-                    ================================================== */}
+                    {/* LIBRARIAN */}
 
                     <div className="mt-8 flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 p-4">
+
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <BookOpen
                                 size={18}
@@ -766,6 +786,7 @@ export default function BookDetails({ id }) {
                         </div>
 
                         <div>
+
                             <p className="text-sm font-bold">
                                 Listed by{" "}
                                 {book.librarianName ||
@@ -779,16 +800,19 @@ export default function BookDetails({ id }) {
                                     }
                                 </p>
                             )}
+
                         </div>
+
                     </div>
+
                 </div>
+
             </div>
 
-            {/* =================================================
-                REVIEWS
-            ================================================== */}
+            {/* REVIEWS */}
 
             <section className="mt-20 border-t border-base-300 pt-12">
+
                 <h2 className="text-3xl font-black">
                     Reviews
                 </h2>
@@ -797,7 +821,9 @@ export default function BookDetails({ id }) {
                     Reviews from verified readers
                     will appear here.
                 </p>
+
             </section>
+
         </section>
     );
 }
