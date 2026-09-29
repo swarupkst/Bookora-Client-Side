@@ -12,6 +12,7 @@ import {
     Heart,
     Truck,
     User,
+    Pencil,
 } from "lucide-react";
 
 import { authClient } from "@/app/lib/auth-client";
@@ -41,6 +42,26 @@ export default function BookDetails({ id }) {
         useState(false);
 
     const [error, setError] = useState("");
+
+    /*
+     * =======================================================
+     * USER ROLE
+     * =======================================================
+     */
+
+    const userRole =
+        session?.user?.role
+            ?.trim()
+            .toLowerCase();
+
+    const isAdmin =
+        userRole === "admin";
+
+    const isLibrarian =
+        userRole === "librarian";
+
+    const isRegularUser =
+        !isAdmin && !isLibrarian;
 
     /*
      * =======================================================
@@ -80,13 +101,50 @@ export default function BookDetails({ id }) {
 
     /*
      * =======================================================
+     * LIBRARIAN OWNERSHIP
+     * =======================================================
+     *
+     * Librarian can edit ONLY their own book.
+     *
+     * We compare the logged-in user's email with
+     * book.librarianEmail.
+     * =======================================================
+     */
+
+    const loggedInUserEmail =
+        session?.user?.email
+            ?.trim()
+            .toLowerCase();
+
+    const librarianEmail =
+        book?.librarianEmail
+            ?.trim()
+            .toLowerCase();
+
+    const isBookOwner =
+        isLibrarian &&
+        Boolean(loggedInUserEmail) &&
+        Boolean(librarianEmail) &&
+        loggedInUserEmail ===
+            librarianEmail;
+
+    /*
+     * =======================================================
      * CHECK WISHLIST
+     * =======================================================
+     *
+     * Wishlist is ONLY available for regular users.
+     * Admin and Librarian do not need wishlist checking.
      * =======================================================
      */
 
     useEffect(() => {
         async function checkWishlist() {
-            if (!session?.user?.id || !id) {
+            if (
+                !isRegularUser ||
+                !session?.user?.id ||
+                !id
+            ) {
                 setIsWishlisted(false);
                 return;
             }
@@ -98,7 +156,8 @@ export default function BookDetails({ id }) {
                             session.user.id
                         )}`,
                         {
-                            credentials: "include",
+                            credentials:
+                                "include",
                         }
                     );
 
@@ -121,7 +180,9 @@ export default function BookDetails({ id }) {
                             String(id)
                     );
 
-                setIsWishlisted(exists);
+                setIsWishlisted(
+                    exists
+                );
             } catch (err) {
                 console.error(
                     "Check wishlist:",
@@ -139,6 +200,7 @@ export default function BookDetails({ id }) {
         session,
         sessionLoading,
         id,
+        isRegularUser,
     ]);
 
     /*
@@ -152,6 +214,11 @@ export default function BookDetails({ id }) {
             router.push(
                 `/login?redirect=/books/${id}`
             );
+            return;
+        }
+
+        // Only regular users can use wishlist
+        if (!isRegularUser) {
             return;
         }
 
@@ -237,32 +304,16 @@ export default function BookDetails({ id }) {
 
     /*
      * =======================================================
-     * LIBRARIAN OWNERSHIP
-     * =======================================================
-     */
-
-    const loggedInUserEmail =
-        session?.user?.email?.toLowerCase();
-
-    const librarianEmail =
-        book?.librarianEmail?.toLowerCase();
-
-    const isBookOwner =
-        !!loggedInUserEmail &&
-        !!librarianEmail &&
-        loggedInUserEmail ===
-            librarianEmail;
-
-    /*
-     * =======================================================
      * DELIVERY BUTTON STATE
+     * =======================================================
+     *
+     * Delivery is available ONLY for regular users.
      * =======================================================
      */
 
     const deliveryDisabled =
         isCheckedOut ||
         isPendingDelivery ||
-        isBookOwner ||
         checkoutLoading;
 
     /*
@@ -271,80 +322,85 @@ export default function BookDetails({ id }) {
      * =======================================================
      */
 
-const handleRequestDelivery = async () => {
-    // User must be logged in
-    if (!session?.user) {
-        router.push(
-            `/login?redirect=/books/${id}`
-        );
-        return;
-    }
-
-    // Owner cannot request own book
-    if (isBookOwner) {
-        return;
-    }
-
-    // Cannot request unavailable book
-    if (
-        isCheckedOut ||
-        isPendingDelivery
-    ) {
-        return;
-    }
-
-    try {
-        setCheckoutLoading(true);
-        setError("");
-
-        const response = await fetch(
-            `${API_URL}/payments/create-checkout-session`,
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json",
-                },
-
-                credentials: "include",
-
-                body: JSON.stringify({
-                    bookId: id,
-                }),
+    const handleRequestDelivery =
+        async () => {
+            // User must be logged in
+            if (!session?.user) {
+                router.push(
+                    `/login?redirect=/books/${id}`
+                );
+                return;
             }
-        );
 
-        const data = await response.json();
+            // Admin and librarian cannot request delivery
+            if (!isRegularUser) {
+                return;
+            }
 
-        if (!response.ok) {
-            throw new Error(
-                data.message ||
-                    "Unable to start checkout."
-            );
-        }
+            // Cannot request unavailable book
+            if (
+                isCheckedOut ||
+                isPendingDelivery
+            ) {
+                return;
+            }
 
-        if (!data.url) {
-            throw new Error(
-                "Stripe checkout URL was not returned."
-            );
-        }
+            try {
+                setCheckoutLoading(true);
+                setError("");
 
-        window.location.href = data.url;
-    } catch (err) {
-        console.error(
-            "Stripe checkout:",
-            err
-        );
+                const response =
+                    await fetch(
+                        `${API_URL}/payments/create-checkout-session`,
+                        {
+                            method: "POST",
 
-        setError(
-            err.message ||
-                "Unable to start payment."
-        );
+                            headers: {
+                                "Content-Type":
+                                    "application/json",
+                            },
 
-        setCheckoutLoading(false);
-    }
-};
+                            credentials:
+                                "include",
+
+                            body: JSON.stringify({
+                                bookId: id,
+                            }),
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message ||
+                            "Unable to start checkout."
+                    );
+                }
+
+                if (!data.url) {
+                    throw new Error(
+                        "Stripe checkout URL was not returned."
+                    );
+                }
+
+                window.location.href =
+                    data.url;
+            } catch (err) {
+                console.error(
+                    "Stripe checkout:",
+                    err
+                );
+
+                setError(
+                    err.message ||
+                        "Unable to start payment."
+                );
+
+                setCheckoutLoading(false);
+            }
+        };
 
     /*
      * =======================================================
@@ -420,16 +476,19 @@ const handleRequestDelivery = async () => {
      */
 
     let statusText = "Available";
+
     let statusClass =
         "badge-success";
 
     if (isCheckedOut) {
         statusText = "Checked Out";
+
         statusClass =
             "badge-error";
     } else if (isPendingDelivery) {
         statusText =
             "Pending Delivery";
+
         statusClass =
             "badge-warning";
     }
@@ -437,7 +496,9 @@ const handleRequestDelivery = async () => {
     return (
         <section className="mx-auto max-w-7xl px-5 py-12 lg:px-8 lg:py-20">
 
-            {/* BACK */}
+            {/* =================================================
+                BACK
+            ================================================== */}
 
             <Link
                 href="/browse"
@@ -540,7 +601,9 @@ const handleRequestDelivery = async () => {
 
                     </div>
 
-                    {/* INFORMATION CARDS */}
+                    {/* =================================================
+                        INFORMATION CARDS
+                    ================================================== */}
 
                     <div className="mt-8 grid gap-3 sm:grid-cols-2">
 
@@ -601,152 +664,162 @@ const handleRequestDelivery = async () => {
 
                     </div>
 
-                    {/* ACTION BUTTONS */}
+                    {/* =================================================
+                        ACTION BUTTONS
+                    ================================================== */}
 
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
 
-                        {/* Wishlist */}
+                        {/* =================================================
+                            REGULAR USER ACTIONS
+                        ================================================== */}
 
-                        <button
-                            onClick={
-                                handleWishlist
-                            }
-                            disabled={
-                                wishlistLoading
-                            }
-                            className={`btn btn-lg rounded-xl ${
-                                isWishlisted
-                                    ? "btn-secondary"
-                                    : "btn-outline"
-                            }`}
-                        >
+                        {isRegularUser && (
+                            <>
+                                {/* ADD / REMOVE WISHLIST */}
 
-                            {wishlistLoading ? (
-                                <span className="loading loading-spinner loading-sm" />
-                            ) : (
-                                <Heart
-                                    size={
-                                        19
+                                <button
+                                    onClick={
+                                        handleWishlist
                                     }
-                                    fill={
+                                    disabled={
+                                        wishlistLoading
+                                    }
+                                    className={`btn btn-lg rounded-xl ${
                                         isWishlisted
-                                            ? "currentColor"
-                                            : "none"
-                                    }
-                                />
-                            )}
+                                            ? "btn-secondary"
+                                            : "btn-outline"
+                                    }`}
+                                >
 
-                            {wishlistLoading
-                                ? "Saving..."
-                                : isWishlisted
-                                ? "Remove from Wishlist"
-                                : "Add to Wishlist"}
-
-                        </button>
-
-                        {/* DELIVERY */}
-
-                        {!session?.user ? (
-                            <button
-                                onClick={
-                                    handleRequestDelivery
-                                }
-                                className="btn btn-primary btn-lg rounded-xl"
-                            >
-                                <Truck
-                                    size={
-                                        19
-                                    }
-                                />
-
-                                Login to Request
-                                Delivery
-                            </button>
-
-                        ) : isBookOwner ? (
-
-                            <button
-                                disabled
-                                className="btn btn-disabled btn-lg rounded-xl"
-                            >
-                                <User
-                                    size={
-                                        19
-                                    }
-                                />
-
-                                You Own This
-                                Book
-                            </button>
-
-                        ) : isCheckedOut ? (
-
-                            <button
-                                disabled
-                                className="btn btn-disabled btn-lg rounded-xl"
-                            >
-                                <Truck
-                                    size={
-                                        19
-                                    }
-                                />
-
-                                Currently
-                                Checked Out
-                            </button>
-
-                        ) : isPendingDelivery ? (
-
-                            <button
-                                disabled
-                                className="btn btn-disabled btn-lg rounded-xl"
-                            >
-                                <Truck
-                                    size={
-                                        19
-                                    }
-                                />
-
-                                Pending Delivery
-                            </button>
-
-                        ) : (
-
-                            <button
-                                onClick={
-                                    handleRequestDelivery
-                                }
-                                disabled={
-                                    deliveryDisabled
-                                }
-                                className="btn btn-primary btn-lg rounded-xl"
-                            >
-
-                                {checkoutLoading ? (
-                                    <>
+                                    {wishlistLoading ? (
                                         <span className="loading loading-spinner loading-sm" />
+                                    ) : (
+                                        <Heart
+                                            size={
+                                                19
+                                            }
+                                            fill={
+                                                isWishlisted
+                                                    ? "currentColor"
+                                                    : "none"
+                                            }
+                                        />
+                                    )}
 
-                                        Redirecting...
-                                    </>
-                                ) : (
-                                    <>
+                                    {wishlistLoading
+                                        ? "Saving..."
+                                        : isWishlisted
+                                        ? "Remove from Wishlist"
+                                        : "Add to Wishlist"}
+
+                                </button>
+
+                                {/* =================================================
+                                    REQUEST DELIVERY
+                                ================================================== */}
+
+                                {!session?.user ? (
+                                    <button
+                                        onClick={
+                                            handleRequestDelivery
+                                        }
+                                        className="btn btn-primary btn-lg rounded-xl"
+                                    >
                                         <Truck
                                             size={
                                                 19
                                             }
                                         />
 
-                                        Request
+                                        Login to Request
                                         Delivery
-                                    </>
-                                )}
+                                    </button>
+                                ) : isCheckedOut ? (
+                                    <button
+                                        disabled
+                                        className="btn btn-disabled btn-lg rounded-xl"
+                                    >
+                                        <Truck
+                                            size={
+                                                19
+                                            }
+                                        />
 
-                            </button>
+                                        Currently
+                                        Checked Out
+                                    </button>
+                                ) : isPendingDelivery ? (
+                                    <button
+                                        disabled
+                                        className="btn btn-disabled btn-lg rounded-xl"
+                                    >
+                                        <Truck
+                                            size={
+                                                19
+                                            }
+                                        />
+
+                                        Pending Delivery
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={
+                                            handleRequestDelivery
+                                        }
+                                        disabled={
+                                            deliveryDisabled
+                                        }
+                                        className="btn btn-primary btn-lg rounded-xl"
+                                    >
+
+                                        {checkoutLoading ? (
+                                            <>
+                                                <span className="loading loading-spinner loading-sm" />
+
+                                                Redirecting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Truck
+                                                    size={
+                                                        19
+                                                    }
+                                                />
+
+                                                Request
+                                                Delivery
+                                            </>
+                                        )}
+
+                                    </button>
+                                )}
+                            </>
+                        )}
+
+                        {/* =================================================
+                            LIBRARIAN
+                            OWN BOOK ONLY
+                        ================================================== */}
+
+                        {isBookOwner && (
+                            <Link
+                                href={`/dashboard/librarian/edit-book/${book._id}`}
+                                className="btn btn-primary btn-lg rounded-xl"
+                            >
+                                <Pencil
+                                    size={19}
+                                />
+
+                                Edit Book
+                            </Link>
                         )}
 
                     </div>
 
-                    {/* Error */}
+                    {/* =================================================
+                        ERROR
+                    ================================================== */}
 
                     {error && (
                         <p className="mt-3 text-sm text-error">
@@ -754,17 +827,20 @@ const handleRequestDelivery = async () => {
                         </p>
                     )}
 
-                    {/* Payment information */}
+                    {/* =================================================
+                        PAYMENT INFORMATION
+                        ONLY REGULAR USER
+                    ================================================== */}
 
-                    {!isCheckedOut &&
-                        !isPendingDelivery &&
-                        !isBookOwner && (
+                    {isRegularUser &&
+                        !isCheckedOut &&
+                        !isPendingDelivery && (
                             <p className="mt-3 text-sm text-base-content/50">
                                 You will be
                                 redirected to
                                 Stripe Checkout
                                 to pay the delivery
-                                fee of ৳
+                                fee of $
                                 {Number(
                                     book.deliveryFee ||
                                         0
@@ -775,7 +851,9 @@ const handleRequestDelivery = async () => {
                             </p>
                         )}
 
-                    {/* LIBRARIAN */}
+                    {/* =================================================
+                        LIBRARIAN INFORMATION
+                    ================================================== */}
 
                     <div className="mt-8 flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 p-4">
 
@@ -809,7 +887,9 @@ const handleRequestDelivery = async () => {
 
             </div>
 
-            {/* REVIEWS */}
+            {/* =================================================
+                REVIEWS
+            ================================================== */}
 
             <section className="mt-20 border-t border-base-300 pt-12">
 

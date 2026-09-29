@@ -30,7 +30,7 @@ export default function Shell({ children }) {
     const [open, setOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-zinc-50">
+        <div className="min-h-screen bg-transparent">
             {/* Mobile Overlay */}
             {open && (
                 <button
@@ -42,45 +42,26 @@ export default function Shell({ children }) {
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-72 border-none border-zinc-200 bg-transparent backdrop-blur-xl transition-transform lg:translate-x-0 ${
+                className={`fixed inset-y-0 left-0 z-50 w-72 border-none bg-transparent transition-transform lg:translate-x-0 ${
                     open
                         ? "translate-x-0"
                         : "-translate-x-full"
                 }`}
             >
                 {/* Logo */}
-                <div className="flex h-18 items-center justify-between border-b border-zinc-200 px-6">
-                    {/* <Link
-                        href="/dashboard/user"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-2 text-xl font-black text-violet-700"
-                    >
-                        <Library size={25} />
-                        BookOra
-                    </Link>
-
-                    <button
-                        onClick={() => setOpen(false)}
-                        className="rounded-xl p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
-                        aria-label="Close menu"
-                    >
-                        <X size={22} />
-                    </button> */}
+                <div className="flex h-18 items-center justify-between border-b border-transparent px-6">
                 </div>
 
                 {/* Navigation */}
                 <nav className="space-y-1 p-4">
                     {nav.map(([href, label, Icon]) => {
-                        const active =
-                            pathname === href;
+                        const active = pathname === href;
 
                         return (
                             <Link
                                 key={href}
                                 href={href}
-                                onClick={() =>
-                                    setOpen(false)
-                                }
+                                onClick={() => setOpen(false)}
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                                     active
                                         ? "bg-violet-600 text-white shadow-sm"
@@ -98,7 +79,7 @@ export default function Shell({ children }) {
             {/* Main Content */}
             <div className="lg:pl-72">
                 {/* Mobile Top Bar Only */}
-                <header className="flex h-16 items-center border-b border-zinc-200 bg-transparent px-4 md:px-8 lg:hidden">
+                <header className="flex h-16 items-center border-b border-transparent bg-transparent px-4 md:px-8 lg:hidden">
                     <button
                         className="rounded-xl p-2 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
                         onClick={() => setOpen(true)}

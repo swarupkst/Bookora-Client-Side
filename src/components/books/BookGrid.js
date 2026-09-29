@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -37,8 +38,13 @@ export default function BookGrid() {
 
             const allBooks = result.data || [];
 
+            // Only show approved books
+            let filteredBooks = allBooks.filter(
+                (book) => book.status === "approved"
+            );
+
             // Search
-            let filteredBooks = allBooks.filter((book) => {
+            filteredBooks = filteredBooks.filter((book) => {
                 const searchText = search.trim().toLowerCase();
 
                 if (!searchText) {
